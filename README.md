@@ -1,4 +1,6 @@
-# YAT3: Yet Another T3 Code
+# YATT: Yet Another T3 Code
+
+(예전 이름은 YAT3입니다. 이미 `yat3` cask를 설치했다면 `brew update && brew upgrade`로 `yatt`로 옮겨지고, 설정 폴더도 처음 실행할 때 옮겨집니다.)
 
 [T3 Code](https://github.com/pingdotgg/t3code)의 서버는 그대로 사용하고, 화면만 [GPUI](https://www.gpui.rs/)(Zed의 Rust UI 프레임워크)로 다시 만든 네이티브 클라이언트입니다. 에이전트 실행, 스레드 저장, 프로바이더 연결은 모두 T3 Code 서버가 처리하며, 이 앱은 그 서버의 WebSocket RPC에 접속해서 스레드를 보여 주고 명령을 보냅니다.
 
@@ -22,13 +24,13 @@
 ### Homebrew (macOS Apple silicon)
 
 ```sh
-brew tap jadewisemann/yat3 https://github.com/jadewisemann/yet-another-t3-code
-brew install --cask yat3
+brew tap jadewisemann/yatt https://github.com/jadewisemann/yet-another-t3-code
+brew install --cask yatt
 ```
 
-업데이트는 `brew upgrade --cask yat3`로 합니다. 설치하면 `/Applications/YAT3.app`과 터미널용 `yat3` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
+Homebrew 설치만으로 끝나며, T3 Code 앱이나 Node.js를 따로 설치할 필요가 없습니다. 업데이트는 `brew upgrade --cask yatt`로 합니다. 설치하면 `/Applications/YATT.app`과 터미널용 `yatt` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
 
-새 버전은 `Cargo.toml`의 `version`을 올려 main에 병합하면 배포됩니다. `Release` 워크플로가 macOS 앱을 빌드해 GitHub Release를 만들고, `Casks/yat3.rb`의 버전과 sha256을 자동으로 갱신합니다.
+새 버전은 `Cargo.toml`의 `version`을 올려 main에 병합하면 배포됩니다. `Release` 워크플로가 macOS 앱을 빌드해 GitHub Release를 만들고, `Casks/yatt.rb`의 버전과 sha256을 자동으로 갱신합니다.
 
 ### 직접 빌드
 
@@ -36,16 +38,18 @@ Rust stable과 Xcode Command Line Tools가 있으면 됩니다. (Metal 셰이더
 
 ```sh
 cargo build --release
-scripts/bundle-macos.sh        # target/release/YAT3.app 생성
+scripts/bundle-macos.sh        # target/release/YATT.app 생성
 ```
 
 ## 서버와 연결하기
 
-YAT3는 화면만 담당하므로, 같은 Mac에서 T3 Code 데스크톱 앱(또는 `t3 serve`로 띄운 서버)이 함께 실행되어야 합니다.
+### 같은 Mac (기본, 자동)
 
-### 같은 Mac에서 쓰는 경우 (자동)
+macOS 앱 안에 T3 Code 서버의 단독 실행 빌드(`t3` npm 패키지가 내려받는 것과 같은 파일, 버전은 [t3-version](t3-version))가 들어 있습니다. YATT를 실행하면 이미 실행 중인 T3 Code 서버가 있으면 그 서버를 쓰고, 없으면 내장 서버를 `t3 serve`로 직접 띄운 뒤 앱을 종료할 때 함께 끕니다. 토큰은 `t3 auth session issue`로 1년짜리를 발급받으므로 링크를 붙여 넣을 일이 없습니다.
 
-처음 실행하면 YAT3가 `~/.t3/userdata/server-runtime.json`에서 실행 중인 서버를 찾고, `t3 pair`를 대신 실행해서 자동으로 연결합니다. 서버가 꺼져 있으면 T3 Code 앱을 먼저 실행한 뒤 서버가 뜰 때까지 기다립니다. `t3` 명령은 T3 Code 앱이 처음 실행될 때 `~/.local/bin`에 설치하며, 이 명령이 없으면 `npx t3@<서버 버전>`을 대신 사용합니다. 토큰이 만료되어도 같은 방식으로 다시 연결하며, 터미널에서는 `yat3 pair`로 같은 동작을 실행할 수 있습니다.
+서버 데이터는 T3 Code의 기본 폴더인 `~/.t3`를 그대로 쓰므로, 다른 T3 Code 클라이언트에서 만든 스레드도 함께 보입니다. 서버 출력은 설정 폴더의 `server.log`에 남습니다. 터미널에서 `yatt pair`를 실행해도 같은 방식으로 연결 정보를 만듭니다.
+
+에이전트 자체(Codex, Claude Code 등)는 지금처럼 각자 설치되어 있어야 합니다.
 
 ### 다른 컴퓨터의 서버에 연결하는 경우
 
@@ -55,13 +59,13 @@ YAT3는 화면만 담당하므로, 같은 Mac에서 T3 Code 데스크톱 앱(또
 npx t3@nightly pair            # 또는 설치된 t3 CLI로 `t3 pair`
 ```
 
-출력된 `http://…/pair#token=…` 링크를 YAT3 첫 화면에 붙여 넣고 Enter를 누르면 연결됩니다. 터미널에서 `yat3 pair <링크>`로 해도 됩니다. 발급된 토큰은 설정 폴더의 `connection.json`에 저장되며 30일 동안 유효합니다. 만료되면 앱이 다시 페어링 화면을 보여 줍니다.
+출력된 `http://…/pair#token=…` 링크를 YATT 첫 화면에 붙여 넣고 Enter를 누르면 연결됩니다. 터미널에서 `yatt pair <링크>`로 해도 됩니다. 발급된 토큰은 설정 폴더의 `connection.json`에 저장되며 30일 동안 유효합니다. 만료되면 앱이 다시 페어링 화면을 보여 줍니다.
 
 `T3_SERVER_URL`과 `T3_TOKEN` 환경 변수를 지정하면 저장된 연결 대신 그 값을 사용합니다.
 
 ## 설정
 
-설정 폴더는 macOS에서 `~/Library/Application Support/yat3`, Linux에서 `~/.config/yat3`입니다 (`YAT3_CONFIG_DIR`로 변경 가능). `Cmd-,`로 폴더를 열 수 있고, 파일을 고친 뒤 `Cmd-Shift-,`를 누르면 다시 불러옵니다.
+설정 폴더는 macOS에서 `~/Library/Application Support/yatt`, Linux에서 `~/.config/yatt`입니다 (`YATT_CONFIG_DIR`로 변경 가능, 이전 이름 `YAT3_CONFIG_DIR`도 인식). `Cmd-,`로 폴더를 열 수 있고, 파일을 고친 뒤 `Cmd-Shift-,`를 누르면 다시 불러옵니다.
 
 ### 단축키: `keymap.json`
 
@@ -69,23 +73,23 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 
 ```json
 [
-  { "context": "Workspace", "bindings": { "cmd-r": "yat3::RenameThread", "f2": null } }
+  { "context": "Workspace", "bindings": { "cmd-r": "yatt::RenameThread", "f2": null } }
 ]
 ```
 
 | 동작 | 이름 | 기본 키 |
 |---|---|---|
-| 새 스레드 | `yat3::NewThread` | `cmd-n` |
-| 스레드 이름 변경 | `yat3::RenameThread` | `f2`, `cmd-shift-r` |
-| 다음 / 이전 스레드 | `yat3::NextThread` / `yat3::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
-| 입력창으로 이동 | `yat3::FocusComposer` | `cmd-l` |
-| 사이드바 표시 전환 | `yat3::ToggleSidebar` | `cmd-b` |
-| 실행 중지 | `yat3::StopThread` | `cmd-.` |
-| 스레드 보관 | `yat3::ArchiveThread` | `cmd-shift-backspace` |
-| 단축키 목록 | `yat3::ToggleShortcuts` | `cmd-/` |
-| 설정 다시 불러오기 | `yat3::ReloadConfig` | `cmd-shift-,` |
-| 설정 폴더 열기 | `yat3::OpenConfigFolder` | `cmd-,` |
-| 연결 해제 후 다시 페어링 | `yat3::Disconnect` | (메뉴) |
+| 새 스레드 | `yatt::NewThread` | `cmd-n` |
+| 스레드 이름 변경 | `yatt::RenameThread` | `f2`, `cmd-shift-r` |
+| 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
+| 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
+| 사이드바 표시 전환 | `yatt::ToggleSidebar` | `cmd-b` |
+| 실행 중지 | `yatt::StopThread` | `cmd-.` |
+| 스레드 보관 | `yatt::ArchiveThread` | `cmd-shift-backspace` |
+| 단축키 목록 | `yatt::ToggleShortcuts` | `cmd-/` |
+| 설정 다시 불러오기 | `yatt::ReloadConfig` | `cmd-shift-,` |
+| 설정 폴더 열기 | `yatt::OpenConfigFolder` | `cmd-,` |
+| 연결 해제 후 다시 페어링 | `yatt::Disconnect` | (메뉴) |
 
 입력창 안의 편집 키(`text_input::Submit`, `text_input::Cancel` 등)도 `"context": "TextInput"`으로 바꿀 수 있습니다.
 
@@ -104,7 +108,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | `src/rpc.rs` | Effect RPC 프로토콜 클라이언트 (별도 스레드의 tokio + WebSocket) |
 | `src/protocol.rs` | 사용하는 orchestration v2 메시지와 명령 정의 |
 | `src/config.rs` | 페어링(토큰 교환)과 연결 정보 저장 |
-| `src/local.rs` | 같은 컴퓨터의 T3 Code 서버를 찾아 자동으로 페어링 |
+| `src/local.rs` | 내장 T3 Code 서버 실행과 종료, 토큰 발급 |
 | `src/workspace.rs` | 메인 화면 |
 | `src/keymap.rs` | 액션 정의, 기본 단축키, `keymap.json` 로더 |
 | `src/theme.rs` | 팔레트와 `theme.json` 로더 |

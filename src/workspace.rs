@@ -119,7 +119,7 @@ impl Workspace {
             _subscriptions: subscriptions,
         };
         match config::load_connection() {
-            Some(connection) => this.connect(connection, window, cx),
+            Some(connection) => this.start_server_and_connect(connection, window, cx),
             None => {
                 window.focus(&this.pair_input.focus_handle(cx));
                 this.pair_local(window, cx);
@@ -569,6 +569,36 @@ impl Workspace {
         cx.reveal_path(&dir);
     }
 
+    /// Starts the bundled server first when the saved connection points at this machine.
+    fn start_server_and_connect(
+        &mut self,
+        connection: Connection,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !local::is_local(&connection) || std::env::var_os("T3_SERVER_URL").is_some() {
+            self.connect(connection, window, cx);
+            return;
+        }
+        self.status = Status::Connecting;
+        cx.notify();
+        let task = cx
+            .background_executor()
+            .spawn(async move { local::prepare(connection) });
+        cx.spawn_in(window, async move |this, cx| {
+            let result = task.await;
+            this.update_in(cx, |this, window, cx| match result {
+                Ok(connection) => this.connect(connection, window, cx),
+                Err(error) => {
+                    this.status = Status::NeedsPairing(Some(format!("{error:#}")));
+                    cx.notify();
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
     /// Finds T3 Code on this machine (opening the app if needed) and pairs with it.
     fn pair_local(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if matches!(self.status, Status::Pairing | Status::PairingLocal) {
@@ -633,16 +663,16 @@ impl Workspace {
                     .gap_3()
                     .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child("Connect to T3 Code"))
                     .child(div().text_color(p.muted).child(
-                        "If T3 Code runs on this computer, YAT3 connects to it on its own. It opens the T3 Code app when it is not running.",
+                        "YATT runs the T3 Code server on this computer by itself, so there is nothing else to install.",
                     ))
                     .child(
                         div().flex().items_center().gap_2().child(
                             button(
                                 "pair-local",
                                 if finding {
-                                    "Connecting to T3 Code on this computer…".to_string()
+                                    "Starting T3 Code on this computer…".to_string()
                                 } else {
-                                    "Connect to T3 Code on this computer".to_string()
+                                    "Start T3 Code on this computer".to_string()
                                 },
                                 p,
                             )

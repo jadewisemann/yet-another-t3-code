@@ -27,11 +27,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --locked
       - run: cargo build --release --locked
-      - name: Bundle YAT3.app
+      - name: Bundle YATT.app
         run: |
           scripts/bundle-macos.sh target/release
-          cd target/release && ditto -c -k --keepParent YAT3.app YAT3-macos-arm64.zip
+      - name: Start the bundled T3 Code server and pair with it
+        run: |
+          codesign --verify --deep --strict target/release/YATT.app
+          target/release/YATT.app/Contents/Resources/t3/t3 --version
+          T3CODE_HOME="$RUNNER_TEMP/t3home" YATT_CONFIG_DIR="$RUNNER_TEMP/yatt" \
+            target/release/YATT.app/Contents/MacOS/yatt pair || { cat "$RUNNER_TEMP/yatt/server.log"; exit 1; }
+      - name: Zip YATT.app
+        run: |
+          cd target/release && ditto -c -k --keepParent YATT.app YATT-macos-arm64.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: YAT3-macos-arm64
-          path: target/release/YAT3-macos-arm64.zip
+          name: YATT-macos-arm64
+          path: target/release/YATT-macos-arm64.zip

@@ -10,6 +10,7 @@ threads, thread snapshots, renames, and a canned streaming reply to any message.
 
 Every frame the client sends is written to fake-server.log.
 """
+import http
 import asyncio, json, sys, websockets
 LOG = open(sys.argv[1] if len(sys.argv) > 1 else "fake-server.log", "w")
 NOW = "2026-11-24T08:00:00.000Z"
@@ -60,7 +61,12 @@ async def handler(ws, path):
                 await ws.send(json.dumps({"_tag": "Chunk", "requestId": shell_id, "values": [{"kind": "thread.updated", "sequence": 12, "location": "active", "thread": THREADS[payload["threadId"]]}]}))
         else:
             await ws.send(json.dumps({"_tag": "Exit", "requestId": rid, "exit": {"_tag": "Failure", "cause": [{"_tag": "Fail", "error": {"_tag": "X", "message": "unsupported in fake"}}]}}))
+async def process_request(path, headers):
+    # YATT probes this to tell whether a T3 Code server is listening.
+    if path.startswith("/.well-known/t3/environment"):
+        return (http.HTTPStatus.OK, [("Content-Type", "application/json")], b'{"label":"fake"}')
+    return None
 async def main():
-    async with websockets.serve(handler, "127.0.0.1", 3999):
+    async with websockets.serve(handler, "127.0.0.1", 3999, process_request=process_request):
         await asyncio.Future()
 asyncio.run(main())

@@ -3,12 +3,12 @@
 //!
 //! ```json
 //! [
-//!   { "context": "Workspace", "bindings": { "f2": "yat3::RenameThread", "cmd-n": null } }
+//!   { "context": "Workspace", "bindings": { "f2": "yatt::RenameThread", "cmd-n": null } }
 //! ]
 //! ```
 //!
 //! A binding to `null` removes that key. `secondary-` means cmd on macOS and ctrl elsewhere.
-//! `yat3::ReloadConfig` re-reads the file without restarting.
+//! `yatt::ReloadConfig` re-reads the file without restarting.
 
 use std::rc::Rc;
 
@@ -21,7 +21,7 @@ use serde::Deserialize;
 use crate::{config, text_input};
 
 actions!(
-    yat3,
+    yatt,
     [
         /// Start a new thread in the current project.
         NewThread,
@@ -169,6 +169,14 @@ fn user_bindings(text: &str, cx: &App) -> Result<(Vec<KeyBinding>, Vec<String>)>
     Ok((bindings, errors))
 }
 
+/// Accepts `yat3::` action names from before the app was called YATT.
+fn current_name(name: &str) -> String {
+    match name.strip_prefix("yat3::") {
+        Some(rest) => format!("yatt::{rest}"),
+        None => name.to_string(),
+    }
+}
+
 fn binding(
     keys: &str,
     target: &serde_json::Value,
@@ -178,7 +186,7 @@ fn binding(
     let action: Box<dyn Action> = match target {
         serde_json::Value::Null => Box::new(NoAction),
         serde_json::Value::String(name) => cx
-            .build_action(name, None)
+            .build_action(&current_name(name), None)
             .map_err(|error| anyhow!("{error}"))?,
         // ["action::Name", { ...arguments }], as in Zed.
         serde_json::Value::Array(parts) => {
@@ -186,7 +194,7 @@ fn binding(
                 .first()
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| anyhow!("expected [\"action::Name\", {{..}}]"))?;
-            cx.build_action(name, parts.get(1).cloned())
+            cx.build_action(&current_name(name), parts.get(1).cloned())
                 .map_err(|error| anyhow!("{error}"))?
         }
         _ => return Err(anyhow!("expected an action name or null")),

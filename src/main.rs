@@ -19,13 +19,19 @@ use crate::workspace::Workspace;
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let args: Vec<String> = std::env::args().collect();
-    // `yat3 pair [link]` pairs from a terminal without opening the window. Without a link
+    // `yatt pair [link]` pairs from a terminal without opening the window. Without a link
     // it pairs with T3 Code on this machine.
     if args.get(1).map(String::as_str) == Some("pair") {
         let result = match args.get(2) {
             Some(link) => config::pair(link),
             None => local::pair(),
-        };
+        }
+        .and_then(|connection| {
+            rpc::check(&connection).map_err(|error| error.context("the new token did not work"))?;
+            Ok(connection)
+        });
+        // A server started just for pairing stops with this command.
+        local::stop_server();
         match result {
             Ok(connection) => {
                 println!(
@@ -48,8 +54,10 @@ fn main() {
         cx.set_global(theme);
         notices.extend(keymap::load(cx));
         cx.on_action(|_: &Quit, cx| cx.quit());
+        // Stop the bundled server however the app quits (menu, last window, logout).
+        cx.on_app_quit(|_| async { local::stop_server() }).detach();
         cx.set_menus(vec![Menu {
-            name: "YAT3".into(),
+            name: "YATT".into(),
             items: vec![
                 MenuItem::action("Reload Config", keymap::ReloadConfig),
                 MenuItem::action("Open Config Folder", keymap::OpenConfigFolder),
@@ -67,7 +75,7 @@ fn main() {
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 titlebar: Some(TitlebarOptions {
-                    title: Some("YAT3".into()),
+                    title: Some("YATT".into()),
                     ..Default::default()
                 }),
                 window_min_size: Some(size(px(640.), px(420.))),

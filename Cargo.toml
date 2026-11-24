@@ -1,6 +1,6 @@
 [package]
-name = "yat3"
-version = "0.1.1"
+name = "yatt"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
