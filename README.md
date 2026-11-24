@@ -19,13 +19,16 @@
 
 ## 설치
 
-### 빌드된 앱 받기 (macOS Apple silicon)
-
-GitHub Actions의 `CI` 실행 결과에서 `YAT3-macos-arm64` 아티팩트를 받아 압축을 풀고 `YAT3.app`을 응용 프로그램 폴더로 옮깁니다. 개발자 서명이 없으므로 처음 한 번은 다음 명령이 필요합니다.
+### Homebrew (macOS Apple silicon)
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/YAT3.app
+brew tap jadewisemann/yat3 https://github.com/jadewisemann/yet-another-t3-code
+brew install --cask yat3
 ```
+
+업데이트는 `brew upgrade --cask yat3`로 합니다. 설치하면 `/Applications/YAT3.app`과 터미널용 `yat3` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
+
+새 버전은 `Cargo.toml`의 `version`을 올려 main에 병합하면 배포됩니다. `Release` 워크플로가 macOS 앱을 빌드해 GitHub Release를 만들고, `Casks/yat3.rb`의 버전과 sha256을 자동으로 갱신합니다.
 
 ### 직접 빌드
 

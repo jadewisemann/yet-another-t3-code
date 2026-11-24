@@ -97,6 +97,13 @@ impl TextInput {
     }
 
     fn submit(&mut self, _: &Submit, _: &mut Window, cx: &mut Context<Self>) {
+        // While an IME (Korean, Japanese, ...) is composing, Enter commits the composition.
+        // Sending then would leave the committed syllable behind in the emptied field.
+        if self.marked_range.is_some() {
+            self.marked_range = None;
+            cx.notify();
+            return;
+        }
         cx.emit(InputEvent::Submit);
     }
 
