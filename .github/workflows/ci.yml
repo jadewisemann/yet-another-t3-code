@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GPUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libfontconfig1-dev libfreetype-dev libx11-xcb-dev libxcb-xkb-dev libvulkan-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: cargo build --locked
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - name: Bundle YAT3.app
+        run: |
+          scripts/bundle-macos.sh target/release
+          cd target/release && ditto -c -k --keepParent YAT3.app YAT3-macos-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YAT3-macos-arm64
+          path: target/release/YAT3-macos-arm64.zip

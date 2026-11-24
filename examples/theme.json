@@ -1,0 +1,16 @@
+{
+  "mode": "auto",
+  "uiFont": null,
+  "messageFont": "Georgia",
+  "fontSize": 14,
+  "light": {
+    "background": "#faf9f5",
+    "sidebar": "#f0eee6",
+    "accent": "#c96442"
+  },
+  "dark": {
+    "background": "#262624",
+    "sidebar": "#1f1e1d",
+    "accent": "#d97757"
+  }
+}
