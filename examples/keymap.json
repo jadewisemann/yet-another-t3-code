@@ -1,0 +1,13 @@
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      "f2": "yat3::RenameThread",
+      "cmd-r": "yat3::RenameThread",
+      "cmd-shift-n": "yat3::NewThread",
+      "cmd-j": "yat3::NextThread",
+      "cmd-k": "yat3::PreviousThread",
+      "cmd-shift-backspace": null
+    }
+  }
+]
