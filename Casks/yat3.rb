@@ -8,15 +8,16 @@ cask "yat3" do
   homepage "https://github.com/jadewisemann/yet-another-t3-code"
 
   depends_on arch: :arm64
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "YAT3.app"
   binary "#{appdir}/YAT3.app/Contents/MacOS/yat3"
 
   # The app is ad-hoc signed, not notarized; clear quarantine so it opens without a prompt.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/YAT3.app"]
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args:         ["-dr", "com.apple.quarantine", "{{appdir}}/YAT3.app"],
+        must_succeed: false
   end
 
   zap trash: "~/Library/Application Support/yat3"
