@@ -122,12 +122,16 @@ pub fn pair(pairing_url: &str) -> Result<Connection> {
     if !origin.is_tuple() {
         bail!("the link has no server address");
     }
-    let server_url = origin.ascii_serialization();
+    exchange_token(&origin.ascii_serialization(), &token)
+}
 
+/// Trades a one-time pairing token for a bearer token at `server_url` and saves it.
+pub fn exchange_token(server_url: &str, token: &str) -> Result<Connection> {
+    let server_url = server_url.trim_end_matches('/').to_string();
     let os = std::env::consts::OS;
     let response = ureq::post(format!("{server_url}/oauth/token")).send_form([
         ("grant_type", TOKEN_EXCHANGE_GRANT),
-        ("subject_token", token.as_str()),
+        ("subject_token", token),
         ("subject_token_type", BOOTSTRAP_TOKEN_TYPE),
         ("requested_token_type", ACCESS_TOKEN_TYPE),
         ("client_label", "YAT3 (GPUI)"),

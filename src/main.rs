@@ -1,5 +1,6 @@
 mod config;
 mod keymap;
+mod local;
 mod protocol;
 mod rpc;
 mod text_input;
@@ -18,13 +19,14 @@ use crate::workspace::Workspace;
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
     let args: Vec<String> = std::env::args().collect();
-    // `yat3 pair <link>` pairs from a terminal without opening the window.
+    // `yat3 pair [link]` pairs from a terminal without opening the window. Without a link
+    // it pairs with T3 Code on this machine.
     if args.get(1).map(String::as_str) == Some("pair") {
-        let Some(link) = args.get(2) else {
-            eprintln!("usage: yat3 pair <pairing link>");
-            std::process::exit(2);
+        let result = match args.get(2) {
+            Some(link) => config::pair(link),
+            None => local::pair(),
         };
-        match config::pair(link) {
+        match result {
             Ok(connection) => {
                 println!(
                     "Paired with {}. Saved to {}",

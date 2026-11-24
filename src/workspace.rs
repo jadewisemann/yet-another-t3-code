@@ -9,6 +9,7 @@ use gpui::{
 
 use crate::config::{self, Connection};
 use crate::keymap::*;
+use crate::local;
 use crate::protocol::{
     self, ConversationMessage, ProjectShell, ShellStreamItem, ThreadShell, ThreadStreamItem,
 };
@@ -20,6 +21,8 @@ use crate::theme::{self, Palette, Theme};
 enum Status {
     NeedsPairing(Option<String>),
     Pairing,
+    /// Looking for T3 Code on this machine and pairing with it.
+    PairingLocal,
     Connecting,
     Connected,
     Disconnected(String),
@@ -41,6 +44,11 @@ pub struct Workspace {
     rename_input: Entity<TextInput>,
     renaming: bool,
     pair_input: Entity<TextInput>,
+    /// The current server is on this machine, so a rejected token can be replaced silently.
+    server_is_local: bool,
+    /// Pairing again after a rejected token happens once per launch, so a server that keeps
+    /// refusing (an incompatible protocol, say) does not loop.
+    repaired_once: bool,
     sidebar_visible: bool,
     shortcuts_visible: bool,
     notice: Option<String>,
@@ -101,6 +109,8 @@ impl Workspace {
             rename_input,
             renaming: false,
             pair_input,
+            server_is_local: false,
+            repaired_once: false,
             sidebar_visible: true,
             shortcuts_visible: false,
             notice: config_notice,
@@ -110,13 +120,17 @@ impl Workspace {
         };
         match config::load_connection() {
             Some(connection) => this.connect(connection, window, cx),
-            None => window.focus(&this.pair_input.focus_handle(cx)),
+            None => {
+                window.focus(&this.pair_input.focus_handle(cx));
+                this.pair_local(window, cx);
+            }
         }
         this
     }
 
     fn connect(&mut self, connection: Connection, window: &mut Window, cx: &mut Context<Self>) {
         let (tx, rx) = async_channel::unbounded();
+        self.server_is_local = local::is_local(&connection);
         self.rpc = Some(rpc::start(connection, tx));
         self.status = Status::Connecting;
         self._rpc_task = Some(cx.spawn_in(window, async move |this, cx| {
@@ -151,6 +165,14 @@ impl Workspace {
                     "The server did not accept the saved token ({reason}). Pair again."
                 )));
                 window.focus(&self.pair_input.focus_handle(cx));
+                // An expired token for a server on this machine can be replaced without asking.
+                if self.server_is_local
+                    && !self.repaired_once
+                    && std::env::var_os("T3_TOKEN").is_none()
+                {
+                    self.repaired_once = true;
+                    self.pair_local(window, cx);
+                }
             }
             RpcEvent::Shell(item) => self.on_shell_item(item),
             RpcEvent::Thread { thread_id, item } => {
@@ -547,6 +569,28 @@ impl Workspace {
         cx.reveal_path(&dir);
     }
 
+    /// Finds T3 Code on this machine (opening the app if needed) and pairs with it.
+    fn pair_local(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(self.status, Status::Pairing | Status::PairingLocal) {
+            return;
+        }
+        self.status = Status::PairingLocal;
+        cx.notify();
+        let task = cx.background_executor().spawn(async move { local::pair() });
+        cx.spawn_in(window, async move |this, cx| {
+            let result = task.await;
+            this.update_in(cx, |this, window, cx| match result {
+                Ok(connection) => this.connect(connection, window, cx),
+                Err(error) => {
+                    this.status = Status::NeedsPairing(Some(format!("{error:#}")));
+                    cx.notify();
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
     fn disconnect(&mut self, _: &Disconnect, window: &mut Window, cx: &mut Context<Self>) {
         config::forget_connection();
         self.rpc = None;
@@ -562,8 +606,14 @@ impl Workspace {
 
     // Rendering
 
-    fn render_pairing(&self, message: Option<&str>, p: Palette) -> AnyElement {
+    fn render_pairing(
+        &self,
+        message: Option<&str>,
+        p: Palette,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let busy = self.status == Status::Pairing;
+        let finding = self.status == Status::PairingLocal;
         div()
             .size_full()
             .flex()
@@ -582,11 +632,28 @@ impl Workspace {
                     .flex_col()
                     .gap_3()
                     .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child("Connect to T3 Code"))
+                    .child(div().text_color(p.muted).child(
+                        "If T3 Code runs on this computer, YAT3 connects to it on its own. It opens the T3 Code app when it is not running.",
+                    ))
                     .child(
-                        div().text_color(p.muted).child(
-                            "Run `t3 pair` on the machine where T3 Code runs (or create a pairing link in its settings), then paste the link here and press Enter.",
+                        div().flex().items_center().gap_2().child(
+                            button(
+                                "pair-local",
+                                if finding {
+                                    "Connecting to T3 Code on this computer…".to_string()
+                                } else {
+                                    "Connect to T3 Code on this computer".to_string()
+                                },
+                                p,
+                            )
+                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                                this.pair_local(window, cx)
+                            })),
                         ),
                     )
+                    .child(div().text_color(p.muted).child(
+                        "For a server on another machine, run `t3 pair` there (or create a pairing link in its settings), then paste the link here and press Enter.",
+                    ))
                     .child(input_box(self.pair_input.clone(), p))
                     .when(busy, |el| el.child(div().text_color(p.muted).child("Pairing…")))
                     .when_some(message.map(str::to_owned), |el, message| {
@@ -696,7 +763,7 @@ impl Workspace {
             Status::Connected if self.shell_synced => "Connected".to_string(),
             Status::Connected | Status::Connecting => "Connecting…".to_string(),
             Status::Disconnected(reason) => format!("Reconnecting ({reason})"),
-            Status::Pairing => "Pairing…".to_string(),
+            Status::Pairing | Status::PairingLocal => "Pairing…".to_string(),
             Status::NeedsPairing(_) => "Not paired".to_string(),
         };
 
@@ -1063,11 +1130,11 @@ impl Render for Workspace {
 
         let pairing_message = match &self.status {
             Status::NeedsPairing(message) => Some(message.clone()),
-            Status::Pairing => Some(None),
+            Status::Pairing | Status::PairingLocal => Some(None),
             _ => None,
         };
         if let Some(message) = pairing_message {
-            return root.child(self.render_pairing(message.as_deref(), p));
+            return root.child(self.render_pairing(message.as_deref(), p, cx));
         }
 
         let main = div()

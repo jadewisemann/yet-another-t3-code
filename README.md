@@ -41,13 +41,21 @@ scripts/bundle-macos.sh        # target/release/YAT3.app 생성
 
 ## 서버와 연결하기
 
-T3 Code 데스크톱 앱이나 `t3` 서버가 실행 중이어야 합니다. 그 상태에서 페어링 링크를 만듭니다.
+YAT3는 화면만 담당하므로, 같은 Mac에서 T3 Code 데스크톱 앱(또는 `t3 serve`로 띄운 서버)이 함께 실행되어야 합니다.
+
+### 같은 Mac에서 쓰는 경우 (자동)
+
+처음 실행하면 YAT3가 `~/.t3/userdata/server-runtime.json`에서 실행 중인 서버를 찾고, `t3 pair`를 대신 실행해서 자동으로 연결합니다. 서버가 꺼져 있으면 T3 Code 앱을 먼저 실행한 뒤 서버가 뜰 때까지 기다립니다. `t3` 명령은 T3 Code 앱이 처음 실행될 때 `~/.local/bin`에 설치하며, 이 명령이 없으면 `npx t3@<서버 버전>`을 대신 사용합니다. 토큰이 만료되어도 같은 방식으로 다시 연결하며, 터미널에서는 `yat3 pair`로 같은 동작을 실행할 수 있습니다.
+
+### 다른 컴퓨터의 서버에 연결하는 경우
+
+서버가 실행되는 컴퓨터에서 페어링 링크를 만듭니다.
 
 ```sh
 npx t3@nightly pair            # 또는 설치된 t3 CLI로 `t3 pair`
 ```
 
-출력된 `http://127.0.0.1:…/pair#token=…` 링크를 YAT3 첫 화면에 붙여 넣고 Enter를 누르면 연결됩니다. 터미널에서 `yat3 pair <링크>`로 해도 됩니다. 발급된 토큰은 설정 폴더의 `connection.json`에 저장되며 30일 동안 유효합니다. 만료되면 앱이 다시 페어링 화면을 보여 줍니다.
+출력된 `http://…/pair#token=…` 링크를 YAT3 첫 화면에 붙여 넣고 Enter를 누르면 연결됩니다. 터미널에서 `yat3 pair <링크>`로 해도 됩니다. 발급된 토큰은 설정 폴더의 `connection.json`에 저장되며 30일 동안 유효합니다. 만료되면 앱이 다시 페어링 화면을 보여 줍니다.
 
 `T3_SERVER_URL`과 `T3_TOKEN` 환경 변수를 지정하면 저장된 연결 대신 그 값을 사용합니다.
 
@@ -96,6 +104,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | `src/rpc.rs` | Effect RPC 프로토콜 클라이언트 (별도 스레드의 tokio + WebSocket) |
 | `src/protocol.rs` | 사용하는 orchestration v2 메시지와 명령 정의 |
 | `src/config.rs` | 페어링(토큰 교환)과 연결 정보 저장 |
+| `src/local.rs` | 같은 컴퓨터의 T3 Code 서버를 찾아 자동으로 페어링 |
 | `src/workspace.rs` | 메인 화면 |
 | `src/keymap.rs` | 액션 정의, 기본 단축키, `keymap.json` 로더 |
 | `src/theme.rs` | 팔레트와 `theme.json` 로더 |
