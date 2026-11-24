@@ -81,7 +81,7 @@ impl RpcHandle {
 pub fn start(connection: Connection, events: async_channel::Sender<RpcEvent>) -> RpcHandle {
     let (tx, rx) = mpsc::unbounded_channel();
     std::thread::Builder::new()
-        .name("yat3-rpc".into())
+        .name("yatt-rpc".into())
         .spawn(move || {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -367,7 +367,7 @@ async fn session(
     }
 }
 
-fn build_request(connection: &Connection) -> Result<tungstenite::handshake::client::Request> {
+pub fn build_request(connection: &Connection) -> Result<tungstenite::handshake::client::Request> {
     let mut request = connection.websocket_url()?.into_client_request()?;
     let header = format!("Bearer {}", connection.token)
         .parse()
@@ -453,4 +453,31 @@ mod tests {
         });
         assert_eq!(exit_failure(&failed).as_deref(), Some("nope"));
     }
+}
+
+/// Opens a socket with the saved token and closes it again. Used by `yatt pair` to prove the
+/// token works.
+pub fn check(connection: &Connection) -> Result<()> {
+    let request = build_request(connection)?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async move {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            tokio_tungstenite::connect_async(request),
+        )
+        .await
+        {
+            Ok(Ok((mut socket, _))) => {
+                let _ = socket.close(None).await;
+                Ok(())
+            }
+            Ok(Err(tungstenite::Error::Http(response))) => {
+                Err(anyhow!("the server answered HTTP {}", response.status()))
+            }
+            Ok(Err(error)) => Err(anyhow!(error)),
+            Err(_) => Err(anyhow!("the server did not answer within 15 seconds")),
+        }
+    })
 }

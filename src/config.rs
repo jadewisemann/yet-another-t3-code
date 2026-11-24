@@ -10,13 +10,22 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 
 pub fn config_dir() -> PathBuf {
-    if let Some(dir) = std::env::var_os("YAT3_CONFIG_DIR") {
+    // YAT3_CONFIG_DIR is the name from before the app was called YATT.
+    if let Some(dir) =
+        std::env::var_os("YATT_CONFIG_DIR").or_else(|| std::env::var_os("YAT3_CONFIG_DIR"))
+    {
         return PathBuf::from(dir);
     }
-    dirs::config_dir()
+    let base = dirs::config_dir()
         .or_else(|| dirs::home_dir().map(|home| home.join(".config")))
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("yat3")
+        .unwrap_or_else(|| PathBuf::from("."));
+    let dir = base.join("yatt");
+    // Carry settings over from the folder the app used when it was called YAT3.
+    let old = base.join("yat3");
+    if !dir.exists() && old.is_dir() {
+        let _ = std::fs::rename(&old, &dir);
+    }
+    dir
 }
 
 pub fn config_file(name: &str) -> PathBuf {
@@ -134,7 +143,7 @@ pub fn exchange_token(server_url: &str, token: &str) -> Result<Connection> {
         ("subject_token", token),
         ("subject_token_type", BOOTSTRAP_TOKEN_TYPE),
         ("requested_token_type", ACCESS_TOKEN_TYPE),
-        ("client_label", "YAT3 (GPUI)"),
+        ("client_label", "YATT (GPUI)"),
         ("client_os", os),
     ]);
     let mut response = match response {

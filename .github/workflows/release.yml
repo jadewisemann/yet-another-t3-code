@@ -34,31 +34,31 @@ jobs:
           fi
       - uses: Swatinem/rust-cache@v2
         if: steps.version.outputs.exists == 'false'
-      - name: Build YAT3.app
+      - name: Build YATT.app
         if: steps.version.outputs.exists == 'false'
         run: |
           cargo build --release --locked
           scripts/bundle-macos.sh target/release
-          cd target/release && ditto -c -k --keepParent YAT3.app YAT3-macos-arm64.zip
+          cd target/release && ditto -c -k --keepParent YATT.app YATT-macos-arm64.zip
       - name: Publish release
         if: steps.version.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          gh release create "v$VERSION" target/release/YAT3-macos-arm64.zip \
-            --target "$GITHUB_SHA" --title "YAT3 $VERSION" --generate-notes
+          gh release create "v$VERSION" target/release/YATT-macos-arm64.zip \
+            --target "$GITHUB_SHA" --title "YATT $VERSION" --generate-notes
       - name: Update Homebrew cask
         if: steps.version.outputs.exists == 'false'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          sha="$(shasum -a 256 target/release/YAT3-macos-arm64.zip | cut -d' ' -f1)"
-          sed -i '' -E "s/^  version \".*\"/  version \"$VERSION\"/" Casks/yat3.rb
-          sed -i '' -E "s/^  sha256 .*/  sha256 \"$sha\"/" Casks/yat3.rb
-          if git diff --quiet Casks/yat3.rb; then exit 0; fi
+          sha="$(shasum -a 256 target/release/YATT-macos-arm64.zip | cut -d' ' -f1)"
+          sed -i '' -E "s/^  version \".*\"/  version \"$VERSION\"/" Casks/yatt.rb
+          sed -i '' -E "s/^  sha256 .*/  sha256 \"$sha\"/" Casks/yatt.rb
+          if git diff --quiet Casks/yatt.rb; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/yat3.rb
+          git add Casks/yatt.rb
           git commit -m "Update cask to $VERSION [skip ci]"
           git push origin HEAD:main
