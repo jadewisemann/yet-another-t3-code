@@ -1,6 +1,6 @@
 cask "yat3" do
   version "0.1.0"
-  sha256 :no_check
+  sha256 "846d2fdc3c3b8d580ab6ad977e295592b8a0c8e36f9e0431f9abee9cd2adeab2"
 
   url "https://github.com/jadewisemann/yet-another-t3-code/releases/download/v#{version}/YAT3-macos-arm64.zip"
   name "YAT3"
