@@ -70,7 +70,10 @@ func Start(ctx context.Context, bin, root string) (*Target, error) {
 	t.cmd.Stderr = t.Log
 	t.cmd.Env = append(os.Environ(), "NO_COLOR=1", "T3CODE_DISABLE_TELEMETRY=1",
 		"FAKE_CODEX_LOG="+filepath.Join(root, "fake-codex.log"), "FAKE_CLAUDE_LOG="+filepath.Join(root, "fake-claude.log"),
-		"CODEX_HOME="+filepath.Join(root, "codex-home"))
+		"CODEX_HOME="+filepath.Join(root, "codex-home"),
+		// Claude's auto-compact threshold depends on these; pin them so a
+		// recording does not depend on the machine's Claude setup.
+		"CLAUDE_CONFIG_DIR="+filepath.Join(root, "claude-home"), "CLAUDE_CODE_AUTO_COMPACT_WINDOW=500000")
 	t.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := t.cmd.Start(); err != nil {
 		return nil, err

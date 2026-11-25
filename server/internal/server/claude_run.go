@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -139,16 +140,121 @@ func (rn *runner) closeClaudes() {
 	}
 }
 
-// claudeContextWindow is the context size upstream reports for a model,
-// and the token count at which Claude Code compacts it.
-func claudeContextWindow(model string) (window, threshold int) {
-	window = 200000
+// claudeContextWindow is the context size upstream reports for a model.
+func claudeContextWindow(model string) int {
 	for _, m := range []string{"opus-5", "sonnet-5", "fable-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-4-6"} {
 		if strings.Contains(model, m) {
-			window = 1000000
+			return 1000000
 		}
 	}
-	return window, min(window, 500000) - 33000
+	return 200000
+}
+
+// claudeAutoCompactReserve is what upstream subtracts from the auto-compact
+// window to get the threshold it reports.
+const claudeAutoCompactReserve = 33000
+
+// claudeAutoCompactThreshold is the token count at which the CLI compacts,
+// or 0 when no auto-compact window is configured or it is not below the
+// model's window. Like upstream's resolveAutoCompactWindow it reads, in
+// order, the project's .claude/settings.local.json and .claude/settings.json,
+// the user's Claude settings.json and then the environment.
+func claudeAutoCompactThreshold(cwd, model string, maxTokens int) int {
+	var files []map[string]any
+	paths := []string{}
+	if cwd != "" {
+		paths = append(paths, filepath.Join(cwd, ".claude", "settings.local.json"), filepath.Join(cwd, ".claude", "settings.json"))
+	}
+	paths = append(paths, filepath.Join(claudeConfigDir(), "settings.json"))
+	for _, p := range paths {
+		var m map[string]any
+		if b, err := os.ReadFile(p); err == nil && json.Unmarshal(b, &m) == nil {
+			files = append(files, m)
+		}
+	}
+	env := func(name string) (string, bool) {
+		for _, f := range files {
+			if e, ok := f["env"].(map[string]any); ok {
+				if v, ok := e[name].(string); ok {
+					return v, true
+				}
+			}
+		}
+		return os.LookupEnv(name)
+	}
+	truthy := func(v string) bool {
+		switch strings.ToLower(strings.TrimSpace(v)) {
+		case "1", "true", "yes", "on":
+			return true
+		}
+		return false
+	}
+	for _, name := range []string{"DISABLE_COMPACT", "DISABLE_AUTO_COMPACT"} {
+		if v, ok := env(name); ok && truthy(v) {
+			return 0
+		}
+	}
+	for _, f := range files {
+		if on, ok := f["autoCompactEnabled"].(bool); ok {
+			if !on {
+				return 0
+			}
+			break
+		}
+	}
+	valid := func(v any) int {
+		var n float64
+		switch x := v.(type) {
+		case float64:
+			n = x
+		case string:
+			if _, err := fmt.Sscan(strings.TrimSpace(x), &n); err != nil {
+				return 0
+			}
+		default:
+			return 0
+		}
+		if n != float64(int(n)) || n < 100000 || n > 1000000 {
+			return 0
+		}
+		return int(n)
+	}
+	window := 0
+	if v, ok := env("CLAUDE_CODE_AUTO_COMPACT_WINDOW"); ok {
+		window = valid(v)
+	}
+	if window == 0 {
+		name := strings.TrimSuffix(strings.TrimSuffix(model, "[1m]"), "[1M]")
+	files:
+		for _, f := range files {
+			if ms, ok := f["modelSettings"].(map[string]any); ok {
+				if s, ok := ms[name].(map[string]any); ok {
+					if s["autoCompactWindow"] == "auto" {
+						break files
+					}
+					if window = valid(s["autoCompactWindow"]); window != 0 {
+						break
+					}
+				}
+			}
+			if window = valid(f["autoCompactWindow"]); window != 0 {
+				break
+			}
+		}
+	}
+	if window == 0 || window >= maxTokens {
+		return 0
+	}
+	return window - claudeAutoCompactReserve
+}
+
+// claudeConfigDir is where the CLI keeps its user settings.
+func claudeConfigDir() string {
+	if d := os.Getenv("CLAUDE_CONFIG_DIR"); d != "" {
+		return d
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".claude")
 }
 
 func (rn *runner) runClaude(r *runState) error {
@@ -295,13 +401,16 @@ type claudeTurn struct {
 
 func (ct *claudeTurn) usageUpdate(ctx context.Context) error {
 	r := ct.r
-	window, threshold := claudeContextWindow(r.model)
+	window := claudeContextWindow(r.model)
 	u := ct.usage
 	r.turnRef = map[string]any{"driver": r.driver, "nativeId": r.turnID, "strength": "strong"}
 	r.tokenUsage = map[string]any{
 		"usedTokens": u.input + u.cacheRead + u.cacheCreation + u.output, "maxTokens": window,
 		"inputTokens": u.input + u.cacheCreation, "cachedInputTokens": u.cacheRead, "outputTokens": u.output,
-		"reasoningOutputTokens": 0, "autoCompactThreshold": threshold, "updatedAt": store.Now(),
+		"reasoningOutputTokens": 0, "updatedAt": store.Now(),
+	}
+	if threshold := claudeAutoCompactThreshold(r.cwd, r.model, window); threshold > 0 {
+		r.tokenUsage["autoCompactThreshold"] = threshold
 	}
 	return r.append(ctx, event{cause: ct.sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root,
 		driver: r.driver, payload: r.providerTurnPayload("running", nil)})
