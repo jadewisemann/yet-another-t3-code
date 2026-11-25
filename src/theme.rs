@@ -33,6 +33,9 @@ pub struct Palette {
     pub user_bubble: Hsla,
     pub danger: Hsla,
     pub working: Hsla,
+    /// Added and removed lines in a diff.
+    pub added: Hsla,
+    pub removed: Hsla,
 }
 
 fn hex(value: u32) -> Hsla {
@@ -60,6 +63,8 @@ impl Palette {
             user_bubble: hex(0xf0eee6),
             danger: hex(0xb3261e),
             working: hex(0xc96442),
+            added: hex(0x2f7d32),
+            removed: hex(0xb3261e),
         }
     }
 
@@ -79,11 +84,13 @@ impl Palette {
             user_bubble: hex(0x3a3936),
             danger: hex(0xf2b8b5),
             working: hex(0xd97757),
+            added: hex(0x8bd49a),
+            removed: hex(0xf2b8b5),
         }
     }
 
     fn apply(&mut self, overrides: &PaletteOverrides) {
-        let fields: [(&Option<String>, &mut Hsla); 14] = [
+        let fields: [(&Option<String>, &mut Hsla); 16] = [
             (&overrides.background, &mut self.background),
             (&overrides.sidebar, &mut self.sidebar),
             (&overrides.surface, &mut self.surface),
@@ -98,6 +105,8 @@ impl Palette {
             (&overrides.user_bubble, &mut self.user_bubble),
             (&overrides.danger, &mut self.danger),
             (&overrides.working, &mut self.working),
+            (&overrides.added, &mut self.added),
+            (&overrides.removed, &mut self.removed),
         ];
         for (value, slot) in fields {
             if let Some(color) = value.as_deref().and_then(parse_color) {
@@ -137,6 +146,8 @@ struct PaletteOverrides {
     user_bubble: Option<String>,
     danger: Option<String>,
     working: Option<String>,
+    added: Option<String>,
+    removed: Option<String>,
 }
 
 #[derive(Default, Deserialize)]
@@ -145,6 +156,7 @@ struct ThemeFile {
     mode: Option<String>,
     ui_font: Option<String>,
     message_font: Option<String>,
+    code_font: Option<String>,
     font_size: Option<f32>,
     #[serde(default)]
     light: PaletteOverrides,
@@ -165,6 +177,8 @@ pub struct Theme {
     pub dark: Palette,
     pub ui_font: Option<String>,
     pub message_font: Option<String>,
+    /// Diffs and terminal output.
+    pub code_font: Option<String>,
     pub font_size: f32,
     pub load_error: Option<String>,
 }
@@ -180,6 +194,14 @@ impl Theme {
             ui_font: None,
             // Claude-style serif for conversation text, where the platform ships one.
             message_font: cfg!(target_os = "macos").then(|| "Georgia".to_string()),
+            code_font: Some(
+                if cfg!(target_os = "macos") {
+                    "Menlo"
+                } else {
+                    "monospace"
+                }
+                .to_string(),
+            ),
             font_size: 14.,
             load_error: None,
         };
@@ -201,6 +223,9 @@ impl Theme {
                 }
                 if file.message_font.is_some() {
                     theme.message_font = file.message_font.filter(|f| !f.is_empty());
+                }
+                if file.code_font.is_some() {
+                    theme.code_font = file.code_font.filter(|f| !f.is_empty());
                 }
                 if let Some(size) = file.font_size.filter(|s| (8.0..=32.0).contains(s)) {
                     theme.font_size = size;

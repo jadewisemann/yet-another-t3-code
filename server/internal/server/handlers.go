@@ -20,12 +20,14 @@ import (
 // tracks which phase implements which method.
 func (s *Server) registerHandlers() map[string]Handler {
 	return map[string]Handler{
-		"orchestration.subscribeShell":  {Stream: true, Run: s.subscribeShell},
-		"orchestration.subscribeThread": {Stream: true, Run: s.subscribeThread},
-		"orchestration.dispatchCommand": {Unary: s.dispatchCommand},
-		"projects.mutate":               {Unary: s.mutateProject},
-		"orchestration.launchThread":    {Unary: s.launchThread},
-		"server.getConfig":              {Unary: s.getConfig},
+		"orchestration.subscribeShell":    {Stream: true, Run: s.subscribeShell},
+		"orchestration.subscribeThread":   {Stream: true, Run: s.subscribeThread},
+		"orchestration.dispatchCommand":   {Unary: s.dispatchCommand},
+		"projects.mutate":                 {Unary: s.mutateProject},
+		"orchestration.launchThread":      {Unary: s.launchThread},
+		"server.getConfig":                {Unary: s.getConfig},
+		"orchestration.getTurnDiff":       {Unary: s.getTurnDiff},
+		"orchestration.getFullThreadDiff": {Unary: s.getFullThreadDiff},
 	}
 }
 

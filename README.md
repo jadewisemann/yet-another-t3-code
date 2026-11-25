@@ -16,11 +16,12 @@
 - 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용하고, 처음에는 Codex 기본 모델을 사용). 제목은 첫 메시지를 보고 Codex가 지어 줍니다.
 - **모델 선택**: 새 스레드를 시작할 때 입력창 아래의 모델 버튼이나 `Cmd-Shift-M`으로 Codex 모델(GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna)과 Claude 모델(Opus 5.5, Sonnet 5.5, Fable 5.2, Haiku 5.5)을 차례로 바꿉니다. 이미 시작한 스레드는 처음 고른 모델을 계속 씁니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
+- **변경 내용 보기**: 헤더의 Changes 버튼이나 `Cmd-Shift-D`로 스레드가 바꾼 파일의 diff를 오른쪽 패널에 엽니다. 처음에는 모든 턴의 변경을 합쳐서 보여 주고, `Cmd-Alt-D`를 누르면 마지막 턴의 변경만 봅니다. 턴이 끝나면 자동으로 갱신됩니다.
 - 실행 중지, 스레드 보관
 - 승인 요청에 답하기 (승인, 이 세션 동안 승인, 거절)와 에이전트의 질문에 보기를 고르거나 입력창 내용으로 답하기
 - 단축키와 색상, 글꼴을 설정 파일로 변경 (재시작 없이 다시 불러오기 가능)
 
-아직 없는 것: diff 보기, 터미널, 첨부 파일, 시작한 스레드의 모델 변경, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
+아직 없는 것: 터미널, 첨부 파일, 시작한 스레드의 모델 변경, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
 
 ## 설치
 
@@ -89,6 +90,8 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
 | 사이드바 표시 전환 | `yatt::ToggleSidebar` | `cmd-b` |
+| 변경 내용 패널 열기 / 닫기 | `yatt::ToggleDiff` | `cmd-shift-d` |
+| 변경 내용: 모든 턴 / 마지막 턴 | `yatt::ToggleDiffScope` | `cmd-alt-d` |
 | 실행 중지 | `yatt::StopThread` | `cmd-.` |
 | 스레드 보관 | `yatt::ArchiveThread` | `cmd-shift-backspace` |
 | 단축키 목록 | `yatt::ToggleShortcuts` | `cmd-/` |
@@ -103,8 +106,8 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 기본 팔레트는 Claude 앱처럼 따뜻한 중성색과 테라코타 강조색을 씁니다. 지정한 항목만 덮어씁니다. 예시는 [examples/theme.json](examples/theme.json)에 있습니다.
 
 - `mode`: `auto`(시스템 따라감), `light`, `dark`
-- `uiFont`, `messageFont`, `fontSize`: 화면 글꼴, 대화 본문 글꼴(macOS 기본값 Georgia), 기본 크기
-- `light`, `dark`: `background`, `sidebar`, `surface`, `border`, `text`, `muted`, `accent`, `accentText`, `selection`, `rowHover`, `rowSelected`, `userBubble`, `danger`, `working` 색상 (`#rgb`, `#rrggbb`, `#rrggbbaa`)
+- `uiFont`, `messageFont`, `codeFont`, `fontSize`: 화면 글꼴, 대화 본문 글꼴(macOS 기본값 Georgia), diff 글꼴(macOS 기본값 Menlo), 기본 크기
+- `light`, `dark`: `background`, `sidebar`, `surface`, `border`, `text`, `muted`, `accent`, `accentText`, `selection`, `rowHover`, `rowSelected`, `userBubble`, `danger`, `working`, `added`, `removed` 색상 (`#rgb`, `#rrggbb`, `#rrggbbaa`)
 
 ## 구조
 
