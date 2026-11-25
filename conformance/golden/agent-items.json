@@ -542,7 +542,14 @@
               {
                 "appRunOrdinal": 1,
                 "capturedAt": "<time>",
-                "files": [],
+                "files": [
+                  {
+                    "additions": 1,
+                    "deletions": 0,
+                    "kind": "modified",
+                    "path": "hello.txt"
+                  }
+                ],
                 "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
                 "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
                 "ordinalWithinScope": 1,
@@ -1034,7 +1041,14 @@
               {
                 "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
                 "completedAt": "<time>",
-                "files": [],
+                "files": [
+                  {
+                    "additions": 1,
+                    "deletions": 0,
+                    "kind": "modified",
+                    "path": "hello.txt"
+                  }
+                ],
                 "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
                 "nativeItemRef": null,
                 "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
@@ -1211,7 +1225,14 @@
                 "item": {
                   "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
                   "completedAt": "<time>",
-                  "files": [],
+                  "files": [
+                    {
+                      "additions": 1,
+                      "deletions": 0,
+                      "kind": "modified",
+                      "path": "hello.txt"
+                    }
+                  ],
                   "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
                   "nativeItemRef": null,
                   "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",

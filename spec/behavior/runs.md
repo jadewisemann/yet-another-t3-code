@@ -57,8 +57,12 @@
 - RUN-17. codex의 `item/commandExecution/requestApproval`과 `item/fileChange/requestApproval`은 `approval_request` 노드(부모는 해당 항목 노드)와 turn item(`waiting`, `requestKind`, `prompt`), `runtime-request.updated`(`pending`, `responseCapability: live`)가 됩니다. 요청 id는 `runtime-request:provider:codex:provider-turn:<enc>:native-request:<enc>:<uuid>`입니다. `item/tool/requestUserInput`은 해당 항목 노드가 `user_input_request` 노드가 되고, 질문 목록이 turn item에 들어갑니다. 셸 요약의 `pendingRuntimeRequest`는 가장 먼저 생긴 대기 요청의 `{id, kind, createdAt, blocking: true}`입니다. (`runtime-requests`)
 - RUN-18. `runtime-request.respond`는 요청을 `resolved`(`decision` 또는 `answers` 포함)로 바꾸고, 노드와 turn item을 `completed`(거절과 취소는 `cancelled`)로 기록한 뒤 codex에 답합니다. 사용자 입력의 turn item에는 `questionAnswer`가 붙고, codex에는 `{<질문 id>: {answers: [...]}}`로 보냅니다. `acceptForSession`이나 `acceptAlways`로 승인하면 같은 codex 스레드의 같은 종류 요청은 묻지 않고 승인합니다. 대기 중이 아닌 요청에는 오류를 돌려줍니다. (`runtime-requests`)
 
+## 체크포인트 파일
+
+- RUN-19. 실행이 끝날 때 기록하는 체크포인트의 `files`는 이전 체크포인트 ref와 새 ref 사이의 `git diff --numstat -z` 결과입니다. 각 파일은 `{path, kind: "modified", additions, deletions}`이고(바이너리는 0), 이름이 바뀐 파일은 새 경로를 쓰며, 경로의 `localeCompare` 순서로 정렬됩니다. 체크포인트 turn item의 `files`도 같은 목록입니다. 두 체크포인트 사이에 HEAD가 움직였다면 턴이 쓴 경로(양쪽 끝의 커밋되지 않은 변경, 그 사이에 만든 커밋의 경로)만 남깁니다. 클라이언트에 보내는 형태에서는 200개까지만 보내고, 넘치면 `filesTotal`(`count`, `additions`, `deletions`)을 붙입니다. (`agent-items`)
+
 ## yatt-server 구현 메모
 
 - v2 이벤트(`run.*`, `node.updated`, `message.updated` 등)는 업스트림이 스레드 스트림에 보내는 봉투 그대로 저장하고, 업스트림의 `applyToProjection`처럼 id 기준 upsert로 접습니다(`server/internal/store/v2.go`). 스냅샷의 목록 순서는 업스트림 스냅샷 쿼리의 `ORDER BY`를 따릅니다.
 - codex 프로세스는 프로바이더 인스턴스마다 하나를 공유합니다(`provider-session:provider-instance:codex:shared`). 실행 파일은 `PATH`의 `codex`이고, `YATT_CODEX_BIN`으로 바꿀 수 있습니다.
-- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 권한 승인(`item/permissions/requestApproval`)과 MCP 도구, 웹 검색, 계획, 하위 에이전트 같은 나머지 항목(codex의 다른 서버 요청은 오류로 응답), 명령 출력 스트림(`subscribeCommandOutput`), 체크포인트의 `files` 목록, T3 MCP 도구와 추가 지시문(`additionalContext`).
+- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 권한 승인(`item/permissions/requestApproval`)과 MCP 도구, 웹 검색, 계획, 하위 에이전트 같은 나머지 항목(codex의 다른 서버 요청은 오류로 응답), 명령 출력 스트림(`subscribeCommandOutput`), HEAD가 움직였을 때 fetch로 들어온 커밋을 턴의 경로에서 빼는 처리, T3 MCP 도구와 추가 지시문(`additionalContext`).

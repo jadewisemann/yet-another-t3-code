@@ -742,6 +742,10 @@ func wireTurnItem(raw json.RawMessage) json.RawMessage {
 		if m["status"] == "failed" && strings.TrimSpace(diff) != "" {
 			m["diffStr"] = truncateDetail(diff)
 		}
+	case "checkpoint":
+		if !capCheckpointFiles(m) {
+			return raw
+		}
 	default:
 		return raw
 	}
@@ -910,4 +914,43 @@ func (s *Server) respondRuntimeRequest(ctx context.Context, payload json.RawMess
 		}
 	}
 	return map[string]any{"sequence": events[len(events)-1].Sequence}, nil
+}
+
+// maxWireCheckpointFiles caps the files a checkpoint sends to clients
+// (upstream WireProjection MAX_WIRE_CHECKPOINT_FILES).
+const maxWireCheckpointFiles = 200
+
+// capCheckpointFiles keeps the first 200 files of a checkpoint or checkpoint
+// turn item and adds filesTotal for the whole list. It reports whether m
+// changed.
+func capCheckpointFiles(m map[string]any) bool {
+	files, _ := m["files"].([]any)
+	if len(files) <= maxWireCheckpointFiles || m["filesTotal"] != nil {
+		return false
+	}
+	var additions, deletions float64
+	for _, f := range files {
+		if fm, ok := f.(map[string]any); ok {
+			a, _ := fm["additions"].(float64)
+			d, _ := fm["deletions"].(float64)
+			additions += a
+			deletions += d
+		}
+	}
+	m["files"] = files[:maxWireCheckpointFiles]
+	m["filesTotal"] = map[string]any{"count": len(files), "additions": additions, "deletions": deletions}
+	return true
+}
+
+// wireCheckpoint is a checkpoint payload as clients receive it.
+func wireCheckpoint(raw json.RawMessage) json.RawMessage {
+	var m map[string]any
+	if json.Unmarshal(raw, &m) != nil || !capCheckpointFiles(m) {
+		return raw
+	}
+	out, err := json.Marshal(m)
+	if err != nil {
+		return raw
+	}
+	return out
 }
