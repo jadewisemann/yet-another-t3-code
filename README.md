@@ -15,6 +15,7 @@
 - 대화 보기와 실시간 스트리밍, 메시지 보내기 (실행 중이면 대기열에 추가)
 - 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용하고, 처음에는 Codex 기본 모델을 사용). 제목은 첫 메시지를 보고 Codex가 지어 줍니다.
 - **모델 선택**: 새 스레드를 시작할 때 입력창 아래의 모델 버튼이나 `Cmd-Shift-M`으로 Codex 모델(GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna)과 Claude 모델(Opus 5.5, Sonnet 5.5, Fable 5.2, Haiku 5.5)을 차례로 바꿉니다. 이미 시작한 스레드는 처음 고른 모델을 계속 씁니다.
+- **worktree 스레드**: 새 스레드를 시작할 때 입력창 아래의 Project folder 버튼이나 `Cmd-Alt-W`로 New worktree를 고르면, 서버가 현재 HEAD에서 임시 브랜치(`t3/…`)를 만들고 `~/.yatt/server/worktrees/<저장소>/` 아래에 git worktree를 만든 뒤 그 안에서 에이전트를 실행합니다. 열린 스레드는 입력창 아래에 브랜치를 표시합니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
 - **변경 내용 보기**: 헤더의 Changes 버튼이나 `Cmd-Shift-D`로 스레드가 바꾼 파일의 diff를 오른쪽 패널에 엽니다. 처음에는 모든 턴의 변경을 합쳐서 보여 주고, `Cmd-Alt-D`를 누르면 마지막 턴의 변경만 봅니다. 턴이 끝나면 자동으로 갱신됩니다.
 - 실행 중지, 스레드 보관
@@ -86,6 +87,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | 새 스레드 | `yatt::NewThread` | `cmd-n` |
 | 프로젝트 추가 | `yatt::AddProject` | `cmd-shift-o` |
 | 새 스레드의 모델 바꾸기 | `yatt::CycleModel` | `cmd-shift-m` |
+| 새 스레드를 worktree / 프로젝트 폴더에서 시작 | `yatt::ToggleWorktree` | `cmd-alt-w` |
 | 스레드 이름 변경 | `yatt::RenameThread` | `f2`, `cmd-shift-r` |
 | 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |

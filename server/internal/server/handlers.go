@@ -402,10 +402,7 @@ type launchInput struct {
 	ModelSelection    json.RawMessage `json:"modelSelection"`
 	RuntimeMode       string          `json:"runtimeMode"`
 	InteractionMode   string          `json:"interactionMode"`
-	WorkspaceStrategy struct {
-		Type   string  `json:"type"`
-		Branch *string `json:"branch"`
-	} `json:"workspaceStrategy"`
+	WorkspaceStrategy workspaceStrategy `json:"workspaceStrategy"`
 	InitialMessage json.RawMessage `json:"initialMessage"`
 	GenerateTitle  bool            `json:"generateTitle"`
 }
@@ -415,8 +412,23 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 	if err := json.Unmarshal(payload, &in); err != nil {
 		return nil, err
 	}
-	if in.WorkspaceStrategy.Type != "root" {
-		return nil, fmt.Errorf("yatt-server does not implement workspace strategy %q yet", in.WorkspaceStrategy.Type)
+	strategy := in.WorkspaceStrategy
+	switch strategy.Type {
+	case "root":
+	case "worktree":
+		if strategy.Branch == nil || *strategy.Branch == "" {
+			b, err := temporaryWorktreeBranch()
+			if err != nil {
+				return nil, err
+			}
+			strategy.Branch = &b
+		}
+	case "existing_worktree":
+		if info, err := os.Stat(strategy.WorktreePath); err != nil || !info.IsDir() {
+			return nil, fmt.Errorf("worktree not found: %s", strategy.WorktreePath)
+		}
+	default:
+		return nil, fmt.Errorf("yatt-server does not implement workspace strategy %q", strategy.Type)
 	}
 	threadID := ""
 	if in.ThreadID != nil && *in.ThreadID != "" {
@@ -441,14 +453,21 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 				"commandId": in.CommandID, "commandType": "thread.launch", "message": "Project not found: " + in.ProjectID,
 			}}
 		}
-		branch := in.WorkspaceStrategy.Branch
+		branch := strategy.Branch
+		var worktreePath *string
+		if strategy.Type == "existing_worktree" {
+			worktreePath = &strategy.WorktreePath
+			if branch == nil {
+				branch = gitWorktreeBranch(strategy.WorktreePath)
+			}
+		}
 		if branch == nil {
 			branch = gitBranch(p.WorkspaceRoot)
 		}
 		return store.ThreadCreated, store.Thread{
 			ID: threadID, ProjectID: in.ProjectID, Title: in.Title, CreatedBy: "user", CreationSource: source,
 			ModelSelection: in.ModelSelection, RuntimeMode: in.RuntimeMode, InteractionMode: in.InteractionMode,
-			Branch: branch, CreatedAt: now, UpdatedAt: now,
+			Branch: branch, WorktreePath: worktreePath, CreatedAt: now, UpdatedAt: now,
 		}, nil
 	})
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
@@ -470,15 +489,18 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 			messageID = *first.MessageID
 		}
 		if messageID == "" {
-			if messageID, err = newUUID(); err != nil {
+			id, err := newUUID()
+			if err != nil {
 				return nil, err
 			}
+			// Upstream's shape for a server-chosen first message id.
+			messageID = "message:thread:" + threadID + ":ordinal:1:" + id
 		}
 		dispatch := map[string]any{
 			"type": "message.dispatch", "commandId": in.CommandID + ":initial-message", "threadId": threadID,
 			"messageId": messageID, "text": first.Text, "attachments": rawOr(first.Attachments, []any{}),
 			"createdBy": "user", "creationSource": source,
-			"dispatchMode":     map[string]any{"type": "defer_start", "workspaceStrategy": map[string]any{"type": "root"}},
+			"dispatchMode":     map[string]any{"type": "defer_start", "workspaceStrategy": preparationOf(strategy)},
 			"releaseCommandId": in.CommandID + ":release",
 		}
 		if in.GenerateTitle {
@@ -508,8 +530,9 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 		}
 	})
 	result["projection"] = projection
-	if created {
-		// Upstream records the prepared workspace after the claim.
+	if created && strategy.Type != "worktree" {
+		// Upstream records the prepared workspace after the claim. A new
+		// worktree is recorded once it exists (prepareWorktree).
 		defer s.recordLaunchWorkspace(in.CommandID+":workspace", threadID)
 	}
 	return result, nil
@@ -526,6 +549,26 @@ func (s *Server) recordLaunchWorkspace(commandID, threadID string) {
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
 		s.log.Warn("launch workspace", slog.String("error", err.Error()))
 	}
+}
+
+// preparationOf is the run's workspacePreparation for a launch strategy.
+func preparationOf(s workspaceStrategy) any {
+	switch s.Type {
+	case "worktree":
+		return map[string]any{"type": "worktree", "baseRef": s.BaseRef, "branch": s.Branch}
+	case "existing_worktree":
+		return map[string]any{"type": "existing_worktree", "worktreePath": s.WorktreePath, "branch": s.Branch}
+	}
+	return map[string]any{"type": "root"}
+}
+
+// gitWorktreeBranch is the branch checked out in a worktree, or nil.
+func gitWorktreeBranch(dir string) *string {
+	out, err := git(dir, nil, "symbolic-ref", "--short", "-q", "HEAD")
+	if err != nil || out == "" {
+		return nil
+	}
+	return &out
 }
 
 // gitBranch reads the checked-out branch of a repository without running

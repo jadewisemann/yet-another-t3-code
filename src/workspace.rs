@@ -61,6 +61,8 @@ pub struct Workspace {
     draft_project: Option<String>,
     /// The model new threads start on, once picked; otherwise the latest thread's.
     new_thread_model: Option<serde_json::Value>,
+    /// New threads start in a git worktree of their own.
+    new_thread_worktree: bool,
     messages: Vec<ConversationMessage>,
     messages_loaded: bool,
     /// Approvals and questions in the open thread, by turn item id.
@@ -136,6 +138,7 @@ impl Workspace {
             selected_thread: None,
             draft_project: None,
             new_thread_model: None,
+            new_thread_worktree: false,
             messages: Vec::new(),
             messages_loaded: false,
             requests: Vec::new(),
@@ -475,7 +478,18 @@ impl Workspace {
         if let Some(model) = &self.new_thread_model {
             defaults.model_selection = model.clone();
         }
+        defaults.new_worktree = self.new_thread_worktree;
         defaults
+    }
+
+    fn toggle_worktree(&mut self, _: &ToggleWorktree, _: &mut Window, cx: &mut Context<Self>) {
+        self.new_thread_worktree = !self.new_thread_worktree;
+        self.notice = Some(if self.new_thread_worktree {
+            "New threads start in a git worktree of their own.".into()
+        } else {
+            "New threads start in the project folder.".into()
+        });
+        cx.notify();
     }
 
     /// The model the next new thread starts on.
@@ -1456,6 +1470,11 @@ impl Workspace {
                     .as_ref()
                     .map(protocol::model_label)
                     .unwrap_or_else(|| "Default model".into());
+                let label = match (&thread.worktree_path, &thread.branch) {
+                    (Some(_), Some(branch)) => format!("{label} · worktree {branch}"),
+                    (Some(_), None) => format!("{label} · worktree"),
+                    _ => label,
+                };
                 div().text_color(p.muted).child(label).into_any_element()
             }
             None => {
@@ -1466,11 +1485,34 @@ impl Workspace {
                 } else {
                     format!("{label} · {keys}")
                 };
-                dynamic_button("model-picker".into(), label, p)
-                    .text_xs()
-                    .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
-                        this.cycle_model(&CycleModel, window, cx)
-                    }))
+                let place = if self.new_thread_worktree {
+                    "New worktree"
+                } else {
+                    "Project folder"
+                };
+                let place_keys = window.keystroke_text_for(&ToggleWorktree);
+                let place = if place_keys.is_empty() {
+                    place.to_string()
+                } else {
+                    format!("{place} · {place_keys}")
+                };
+                div()
+                    .flex()
+                    .gap_2()
+                    .child(
+                        dynamic_button("model-picker".into(), label, p)
+                            .text_xs()
+                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                                this.cycle_model(&CycleModel, window, cx)
+                            })),
+                    )
+                    .child(
+                        dynamic_button("worktree-picker".into(), place, p)
+                            .text_xs()
+                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                                this.toggle_worktree(&ToggleWorktree, window, cx)
+                            })),
+                    )
                     .into_any_element()
             }
         };
@@ -1724,6 +1766,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::new_thread))
             .on_action(cx.listener(Self::add_project))
             .on_action(cx.listener(Self::cycle_model))
+            .on_action(cx.listener(Self::toggle_worktree))
             .on_action(cx.listener(Self::rename_thread))
             .on_action(cx.listener(Self::next_thread))
             .on_action(cx.listener(Self::previous_thread))

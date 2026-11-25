@@ -62,7 +62,8 @@ type Step struct {
 	Body        string `json:"body,omitempty"`
 	ContentType string `json:"contentType,omitempty"`
 
-	// cli: arguments after the binary, expanded. Every cli call gets
+	// cli: arguments after the binary, expanded. git: arguments to git,
+	// run in the workspace with a fixed author and date. Every cli call gets
 	// `--base-dir <base>` appended.
 	Args []string `json:"args,omitempty"`
 	// Capture stores string fields of a JSON result (cli stdout, http

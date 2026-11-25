@@ -82,6 +82,10 @@ pub struct ThreadShell {
     pub latest_user_message_at: Option<String>,
     #[serde(default)]
     pub pending_runtime_request: Option<Value>,
+    #[serde(default)]
+    pub branch: Option<String>,
+    #[serde(default)]
+    pub worktree_path: Option<String>,
 }
 
 impl ThreadShell {
@@ -569,6 +573,8 @@ pub struct LaunchDefaults {
     pub model_selection: Value,
     pub runtime_mode: String,
     pub interaction_mode: String,
+    /// Start the thread in a new git worktree on a temporary branch, from HEAD.
+    pub new_worktree: bool,
 }
 
 pub fn launch_thread(project_id: &str, defaults: &LaunchDefaults, first_message: &str) -> Value {
@@ -587,7 +593,11 @@ pub fn launch_thread(project_id: &str, defaults: &LaunchDefaults, first_message:
         "modelSelection": defaults.model_selection,
         "runtimeMode": defaults.runtime_mode,
         "interactionMode": defaults.interaction_mode,
-        "workspaceStrategy": { "type": "root" },
+        "workspaceStrategy": if defaults.new_worktree {
+            json!({ "type": "worktree", "baseRef": "HEAD" })
+        } else {
+            json!({ "type": "root" })
+        },
         "initialMessage": {
             "messageId": new_id(),
             "text": first_message,
@@ -614,6 +624,25 @@ mod model_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn launches_in_a_worktree() {
+        let mut defaults = LaunchDefaults {
+            model_selection: json!({"instanceId": "codex", "model": "m"}),
+            runtime_mode: "full-access".into(),
+            interaction_mode: "default".into(),
+            new_worktree: false,
+        };
+        assert_eq!(
+            launch_thread("p", &defaults, "hi")["workspaceStrategy"],
+            json!({"type": "root"})
+        );
+        defaults.new_worktree = true;
+        assert_eq!(
+            launch_thread("p", &defaults, "hi")["workspaceStrategy"],
+            json!({"type": "worktree", "baseRef": "HEAD"})
+        );
+    }
 
     #[test]
     fn reads_diff_lines() {

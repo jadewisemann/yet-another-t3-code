@@ -503,6 +503,7 @@ pub fn launch_defaults_from(
         interaction_mode: thread
             .and_then(|t| t.interaction_mode.clone())
             .unwrap_or_else(|| "default".into()),
+        new_worktree: false,
     }
 }
 

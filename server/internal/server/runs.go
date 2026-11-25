@@ -408,7 +408,7 @@ func (s *Server) newRunState(st *store.State, t *store.Thread, ordinal int, mess
 // userTurnItem is the turn item of the user message that starts run r.
 func (r *runState) userTurnItem(createdBy, source, intent string, attachments json.RawMessage, at string) map[string]any {
 	return map[string]any{
-		"id": "turn-item:message:" + r.userMessageID, "threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
+		"id": "turn-item:message:" + encodeURIComponent(r.userMessageID), "threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
 		"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
 		"parentItemId": nil, "ordinal": r.nextItemOrdinal(), "status": "completed", "title": nil,
 		"startedAt": at, "completedAt": at, "updatedAt": at, "createdBy": createdBy,
@@ -560,6 +560,16 @@ func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMe
 				release := cmd.ReleaseCommandID
 				if release == "" {
 					release = cmd.CommandID + ":release"
+				}
+				var strategy workspaceStrategy
+				_ = json.Unmarshal(r.workspacePrep, &strategy)
+				if strategy.Type == "worktree" {
+					launch := strings.TrimSuffix(release, ":release")
+					if err := s.prepareWorktree(context.Background(), r, launch, strategy); err != nil {
+						s.log.Warn("worktree preparation failed", slog.String("run", r.ids.run), slog.String("error", err.Error()))
+						s.runs.failPreparation(r, err)
+						return
+					}
 				}
 				if err := s.runs.release(context.Background(), r, release); err != nil {
 					s.log.Warn("run release failed", slog.String("run", r.ids.run), slog.String("error", err.Error()))
@@ -1051,6 +1061,19 @@ func (rn *runner) fail(r *runState, cause error) {
 		event{typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("failed", done)},
 	)
 	_ = cause
+}
+
+// failPreparation ends a deferred run whose workspace could not be made.
+func (rn *runner) failPreparation(r *runState, cause error) {
+	done := store.Now()
+	item := r.preparationItem("failed", done)
+	item["output"], item["exitCode"], item["completedAt"] = cause.Error(), 1, done
+	_ = r.append(context.Background(),
+		event{typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, payload: item})
+	rn.fail(r, cause)
+	if err := rn.promoteQueued(context.Background(), r.ids.thread); err != nil {
+		rn.srv.log.Warn("queued run did not start", slog.String("thread", r.ids.thread), slog.String("error", err.Error()))
+	}
 }
 
 func (r *runState) checkpointScope(at string) map[string]any {
