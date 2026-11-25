@@ -46,14 +46,31 @@ pub enum RpcEvent {
     Launched {
         thread_id: Option<String>,
     },
+    /// The answer to a `query`: the success value, or the failure as text.
+    QueryResult {
+        key: String,
+        result: Result<Value, String>,
+    },
 }
 
 #[derive(Debug)]
 enum RpcCommand {
     SubscribeThread(Option<String>),
-    Dispatch { label: String, command: Value },
-    Launch { input: Value },
-    MutateProject { input: Value },
+    Dispatch {
+        label: String,
+        command: Value,
+    },
+    Launch {
+        input: Value,
+    },
+    MutateProject {
+        input: Value,
+    },
+    Query {
+        key: String,
+        method: &'static str,
+        payload: Value,
+    },
 }
 
 #[derive(Clone)]
@@ -81,6 +98,15 @@ impl RpcHandle {
     pub fn mutate_project(&self, input: Value) {
         let _ = self.tx.send(RpcCommand::MutateProject { input });
     }
+
+    /// Calls a unary method; the answer comes back as `RpcEvent::QueryResult` with `key`.
+    pub fn query(&self, key: impl Into<String>, method: &'static str, payload: Value) {
+        let _ = self.tx.send(RpcCommand::Query {
+            key: key.into(),
+            method,
+            payload,
+        });
+    }
 }
 
 pub fn start(connection: Connection, events: async_channel::Sender<RpcEvent>) -> RpcHandle {
@@ -103,6 +129,7 @@ enum Pending {
     Thread(String),
     Call(String),
     Launch,
+    Query(String),
 }
 
 enum SessionEnd {
@@ -156,6 +183,12 @@ async fn run(
                         let _ = events.send(RpcEvent::CommandFailed {
                             label: "Add project".into(),
                             error: "not connected".into(),
+                        }).await;
+                    }
+                    Some(RpcCommand::Query { key, .. }) => {
+                        let _ = events.send(RpcEvent::QueryResult {
+                            key,
+                            result: Err("not connected".into()),
                         }).await;
                     }
                 },
@@ -271,6 +304,9 @@ async fn session(
                     RpcCommand::MutateProject { input } => {
                         request!(method::PROJECTS_MUTATE, input, Pending::Call("Add project".into()));
                     }
+                    RpcCommand::Query { key, method, payload } => {
+                        request!(method, payload, Pending::Query(key));
+                    }
                 }
             }
             frame = stream.next() => {
@@ -348,6 +384,13 @@ async fn session(
                                         let _ = events.send(RpcEvent::CommandFailed { label, error }).await;
                                     }
                                 }
+                                Pending::Query(key) => {
+                                    let result = match failure {
+                                        Some(error) => Err(error),
+                                        None => Ok(exit.get("value").cloned().unwrap_or(Value::Null)),
+                                    };
+                                    let _ = events.send(RpcEvent::QueryResult { key, result }).await;
+                                }
                                 Pending::Launch => match failure {
                                     Some(error) => {
                                         let _ = events.send(RpcEvent::CommandFailed {
@@ -409,12 +452,19 @@ fn exit_failure(exit: &Value) -> Option<String> {
         .map(|cause| {
             let error = cause.get("error").or_else(|| cause.get("defect"));
             match error {
-                Some(error) => error
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned)
-                    .or_else(|| error.get("_tag").and_then(Value::as_str).map(str::to_owned))
-                    .unwrap_or_else(|| error.to_string()),
+                Some(error) => {
+                    let text = error
+                        .get("message")
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                        .or_else(|| error.get("_tag").and_then(Value::as_str).map(str::to_owned))
+                        .unwrap_or_else(|| error.to_string());
+                    // Errors that wrap another one say why in the cause.
+                    match error.pointer("/cause/message").and_then(Value::as_str) {
+                        Some(cause) => format!("{text}: {cause}"),
+                        None => text,
+                    }
+                }
                 None => cause
                     .get("_tag")
                     .and_then(Value::as_str)

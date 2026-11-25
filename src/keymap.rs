@@ -39,6 +39,10 @@ actions!(
         FocusComposer,
         /// Show or hide the sidebar.
         ToggleSidebar,
+        /// Show or hide the changes the open thread made.
+        ToggleDiff,
+        /// Switch the diff between all turns and the last turn.
+        ToggleDiffScope,
         /// Stop the running turn in the open thread.
         StopThread,
         /// Archive the open thread.
@@ -67,6 +71,8 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
         ("Previous thread", Box::new(PreviousThread)),
         ("Focus message box", Box::new(FocusComposer)),
         ("Toggle sidebar", Box::new(ToggleSidebar)),
+        ("Show changes", Box::new(ToggleDiff)),
+        ("Changes: all turns / last turn", Box::new(ToggleDiffScope)),
         ("Stop turn", Box::new(StopThread)),
         ("Archive thread", Box::new(ArchiveThread)),
         ("Show shortcuts", Box::new(ToggleShortcuts)),
@@ -112,6 +118,8 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-[", PreviousThread, Some("Workspace")),
         KeyBinding::new("secondary-l", FocusComposer, Some("Workspace")),
         KeyBinding::new("secondary-b", ToggleSidebar, Some("Workspace")),
+        KeyBinding::new("secondary-shift-d", ToggleDiff, Some("Workspace")),
+        KeyBinding::new("secondary-alt-d", ToggleDiffScope, Some("Workspace")),
         KeyBinding::new("secondary-.", StopThread, Some("Workspace")),
         KeyBinding::new(
             "secondary-shift-backspace",

@@ -16,6 +16,7 @@ pub mod method {
     pub const SUBSCRIBE_SHELL: &str = "orchestration.subscribeShell";
     pub const SUBSCRIBE_THREAD: &str = "orchestration.subscribeThread";
     pub const PROJECTS_MUTATE: &str = "projects.mutate";
+    pub const GET_TURN_DIFF: &str = "orchestration.getTurnDiff";
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -169,6 +170,121 @@ pub struct ThreadProjection {
     pub messages: Vec<ConversationMessage>,
     #[serde(default)]
     pub turn_items: Vec<Value>,
+    #[serde(default)]
+    pub runs: Vec<Value>,
+    #[serde(default)]
+    pub checkpoints: Vec<Value>,
+}
+
+/// What the diff view needs to know about a thread: which runs completed and which turns
+/// have a checkpoint. Turn numbers are the checkpoints' `appRunOrdinal`.
+#[derive(Clone, Debug, Default)]
+pub struct TurnLedger {
+    completed_runs: std::collections::HashSet<String>,
+    /// Ready checkpoints as (run id, turn).
+    checkpoints: Vec<(String, u64)>,
+}
+
+impl TurnLedger {
+    pub fn from_projection(projection: &ThreadProjection) -> Self {
+        let mut ledger = Self::default();
+        for run in &projection.runs {
+            ledger.update_run(run);
+        }
+        for checkpoint in &projection.checkpoints {
+            ledger.update_checkpoint(checkpoint);
+        }
+        ledger
+    }
+
+    /// Folds a thread event in; true when the latest turn may have changed.
+    pub fn apply_event(&mut self, event: &Value) -> bool {
+        let Some(payload) = event.get("payload") else {
+            return false;
+        };
+        match event.get("type").and_then(Value::as_str) {
+            Some("run.created" | "run.updated") => self.update_run(payload),
+            Some("checkpoint.captured") => self.update_checkpoint(payload),
+            _ => return false,
+        }
+        true
+    }
+
+    fn update_run(&mut self, run: &Value) {
+        let Some(id) = run.get("id").and_then(Value::as_str) else {
+            return;
+        };
+        if run.get("status").and_then(Value::as_str) == Some("completed") {
+            self.completed_runs.insert(id.to_string());
+        } else {
+            self.completed_runs.remove(id);
+        }
+    }
+
+    fn update_checkpoint(&mut self, checkpoint: &Value) {
+        let ready = checkpoint.get("status").and_then(Value::as_str) == Some("ready");
+        let run = checkpoint.get("runId").and_then(Value::as_str);
+        let turn = checkpoint.get("appRunOrdinal").and_then(Value::as_u64);
+        if let (true, Some(run), Some(turn)) = (ready, run, turn)
+            && !self.checkpoints.contains(&(run.to_string(), turn))
+        {
+            self.checkpoints.push((run.to_string(), turn));
+        }
+    }
+
+    /// The last turn whose changes can be shown, or 0 before any.
+    pub fn latest_turn(&self) -> u64 {
+        self.checkpoints
+            .iter()
+            .filter(|(run, _)| self.completed_runs.contains(run))
+            .map(|(_, turn)| *turn)
+            .max()
+            .unwrap_or(0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiffLineKind {
+    /// `diff --git a/x b/x`: starts a file.
+    File,
+    /// `index`, `new file mode`, `---`, `+++` and the like.
+    Meta,
+    Hunk,
+    Added,
+    Removed,
+    Context,
+}
+
+/// Splits a unified diff into lines and says what each one is.
+pub fn diff_lines(diff: &str) -> Vec<(DiffLineKind, String)> {
+    let mut in_header = false;
+    diff.lines()
+        .map(|line| {
+            let kind = if line.starts_with("diff --git ") {
+                in_header = true;
+                DiffLineKind::File
+            } else if line.starts_with("@@") {
+                in_header = false;
+                DiffLineKind::Hunk
+            } else if in_header {
+                DiffLineKind::Meta
+            } else if line.starts_with('+') {
+                DiffLineKind::Added
+            } else if line.starts_with('-') {
+                DiffLineKind::Removed
+            } else {
+                DiffLineKind::Context
+            };
+            (kind, line.to_string())
+        })
+        .collect()
+}
+
+/// The path a `diff --git a/<path> b/<path>` line names.
+pub fn diff_file_path(line: &str) -> &str {
+    line.rsplit_once(" b/")
+        .map(|(_, path)| path)
+        .unwrap_or(line)
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -498,6 +614,41 @@ mod model_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_diff_lines() {
+        let diff = "diff --git a/hello.txt b/hello.txt\nnew file mode 100644\n--- /dev/null\n+++ b/hello.txt\n@@ -0,0 +1,2 @@\n+hello\n-bye\n same\n";
+        let kinds: Vec<_> = diff_lines(diff).into_iter().map(|(k, _)| k).collect();
+        use DiffLineKind::*;
+        assert_eq!(
+            kinds,
+            [File, Meta, Meta, Meta, Hunk, Added, Removed, Context]
+        );
+        assert_eq!(
+            diff_file_path("diff --git a/src/a b.rs b/src/a b.rs"),
+            "src/a b.rs"
+        );
+    }
+
+    #[test]
+    fn tracks_the_latest_turn() {
+        let projection: ThreadProjection = serde_json::from_value(json!({
+            "runs": [{"id": "r1", "status": "completed"}, {"id": "r2", "status": "running"}],
+            "checkpoints": [
+                {"runId": null, "appRunOrdinal": null, "status": "ready"},
+                {"runId": "r1", "appRunOrdinal": 1, "status": "ready"},
+            ],
+        }))
+        .unwrap();
+        let mut ledger = TurnLedger::from_projection(&projection);
+        assert_eq!(ledger.latest_turn(), 1);
+        ledger.apply_event(&json!({"type": "checkpoint.captured", "payload": {"runId": "r2", "appRunOrdinal": 2, "status": "ready"}}));
+        assert_eq!(ledger.latest_turn(), 1);
+        ledger.apply_event(
+            &json!({"type": "run.updated", "payload": {"id": "r2", "status": "completed"}}),
+        );
+        assert_eq!(ledger.latest_turn(), 2);
+    }
 
     #[test]
     fn decodes_shell_items() {

@@ -1,18 +1,20 @@
 //! The main window: sidebar of projects and threads, the open conversation, and the composer.
 
 use std::collections::{BTreeMap, HashMap};
+use std::rc::Rc;
 
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla,
-    PathPromptOptions, ScrollHandle, SharedString, Subscription, Task, Window, div, prelude::*, px,
+    PathPromptOptions, ScrollHandle, SharedString, Subscription, Task, UniformListScrollHandle,
+    Window, div, prelude::*, px, uniform_list,
 };
 
 use crate::config::{self, Connection};
 use crate::keymap::*;
 use crate::local;
 use crate::protocol::{
-    self, ConversationMessage, ProjectShell, RequestItem, ShellStreamItem, ThreadShell,
-    ThreadStreamItem,
+    self, ConversationMessage, DiffLineKind, ProjectShell, RequestItem, ShellStreamItem,
+    ThreadShell, ThreadStreamItem, TurnLedger,
 };
 use crate::rpc::{self, RpcEvent, RpcHandle};
 use crate::text_input::{InputEvent, TextInput};
@@ -27,6 +29,24 @@ enum Status {
     Connecting,
     Connected,
     Disconnected(String),
+}
+
+/// The diff panel: which turns it shows and what the server answered.
+struct DiffView {
+    last_turn_only: bool,
+    /// The thread and turn range the current answer is for, as (thread, from, to).
+    range: Option<(String, u64, u64)>,
+    /// The query in flight; answers to older queries are dropped.
+    request_key: Option<String>,
+    state: DiffState,
+    scroll: UniformListScrollHandle,
+}
+
+enum DiffState {
+    Empty,
+    Loading,
+    Ready(Rc<Vec<(DiffLineKind, SharedString)>>),
+    Failed(String),
 }
 
 pub struct Workspace {
@@ -45,6 +65,11 @@ pub struct Workspace {
     messages_loaded: bool,
     /// Approvals and questions in the open thread, by turn item id.
     requests: Vec<RequestItem>,
+    /// Runs and checkpoints of the open thread, to know its latest turn.
+    turns: TurnLedger,
+    /// Set while the diff panel is open.
+    diff: Option<DiffView>,
+    next_query: u64,
     /// Options picked so far for questions, by request id then question id.
     picked_answers: HashMap<String, BTreeMap<String, String>>,
     composer: Entity<TextInput>,
@@ -114,6 +139,9 @@ impl Workspace {
             messages: Vec::new(),
             messages_loaded: false,
             requests: Vec::new(),
+            turns: TurnLedger::default(),
+            diff: None,
+            next_query: 0,
             picked_answers: HashMap::new(),
             composer,
             rename_input,
@@ -193,6 +221,7 @@ impl Workspace {
             RpcEvent::CommandFailed { label, error } => {
                 self.notice = Some(format!("{label} failed: {error}"));
             }
+            RpcEvent::QueryResult { key, result } => self.on_query_result(key, result),
             RpcEvent::Launched { thread_id } => {
                 if let Some(thread_id) = thread_id {
                     self.select_thread(Some(thread_id), window, cx);
@@ -250,6 +279,8 @@ impl Workspace {
     fn on_thread_item(&mut self, item: ThreadStreamItem) {
         match item {
             ThreadStreamItem::Snapshot { projection } => {
+                self.turns = TurnLedger::from_projection(&projection);
+                self.refresh_diff();
                 self.requests = projection
                     .turn_items
                     .iter()
@@ -262,6 +293,9 @@ impl Workspace {
                 self.scroll_to_end();
             }
             ThreadStreamItem::Event { event } => {
+                if self.turns.apply_event(&event) {
+                    self.refresh_diff();
+                }
                 if let Some(request) = protocol::request_from_event(&event) {
                     match self.requests.iter_mut().find(|r| r.id == request.id) {
                         Some(existing) => *existing = request,
@@ -285,6 +319,100 @@ impl Workspace {
             ThreadStreamItem::Synchronized => self.messages_loaded = true,
             ThreadStreamItem::Unknown => {}
         }
+    }
+
+    /// Asks for the diff the panel should show, unless it already has it.
+    fn refresh_diff(&mut self) {
+        let Some(diff) = &mut self.diff else { return };
+        let Some(thread_id) = self.selected_thread.clone() else {
+            diff.range = None;
+            diff.request_key = None;
+            diff.state = DiffState::Empty;
+            return;
+        };
+        let to = self.turns.latest_turn();
+        let from = if diff.last_turn_only {
+            to.saturating_sub(1)
+        } else {
+            0
+        };
+        let range = (thread_id.clone(), from, to);
+        if diff.range.as_ref() == Some(&range) {
+            return;
+        }
+        diff.range = Some(range);
+        if to == 0 {
+            diff.request_key = None;
+            diff.state = DiffState::Empty;
+            return;
+        }
+        let Some(rpc) = &self.rpc else { return };
+        self.next_query += 1;
+        let key = format!("diff:{}", self.next_query);
+        rpc.query(
+            key.clone(),
+            protocol::method::GET_TURN_DIFF,
+            serde_json::json!({ "threadId": thread_id, "fromTurnCount": from, "toTurnCount": to }),
+        );
+        diff.request_key = Some(key);
+        if !matches!(diff.state, DiffState::Ready(_)) {
+            diff.state = DiffState::Loading;
+        }
+    }
+
+    fn on_query_result(&mut self, key: String, result: Result<serde_json::Value, String>) {
+        let Some(diff) = &mut self.diff else { return };
+        if diff.request_key.as_deref() != Some(key.as_str()) {
+            return;
+        }
+        diff.request_key = None;
+        diff.state = match result {
+            Ok(value) => {
+                let text = value.get("diff").and_then(|d| d.as_str()).unwrap_or("");
+                if text.is_empty() {
+                    DiffState::Empty
+                } else {
+                    let lines = protocol::diff_lines(text)
+                        .into_iter()
+                        .map(|(kind, line)| (kind, SharedString::from(line)))
+                        .collect();
+                    DiffState::Ready(Rc::new(lines))
+                }
+            }
+            Err(error) => {
+                // Ask again next time something changes.
+                diff.range = None;
+                DiffState::Failed(error)
+            }
+        };
+    }
+
+    fn toggle_diff(&mut self, _: &ToggleDiff, _: &mut Window, cx: &mut Context<Self>) {
+        if self.diff.take().is_none() {
+            self.diff = Some(DiffView {
+                last_turn_only: false,
+                range: None,
+                request_key: None,
+                state: DiffState::Empty,
+                scroll: UniformListScrollHandle::new(),
+            });
+            self.refresh_diff();
+        }
+        cx.notify();
+    }
+
+    fn toggle_diff_scope(
+        &mut self,
+        _: &ToggleDiffScope,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match &mut self.diff {
+            Some(diff) => diff.last_turn_only = !diff.last_turn_only,
+            None => return self.toggle_diff(&ToggleDiff, window, cx),
+        }
+        self.refresh_diff();
+        cx.notify();
     }
 
     fn scroll_to_end(&self) {
@@ -409,6 +537,8 @@ impl Workspace {
             self.selected_thread = thread_id.clone();
             self.messages.clear();
             self.messages_loaded = false;
+            self.turns = TurnLedger::default();
+            self.refresh_diff();
             if let Some(rpc) = &self.rpc {
                 rpc.subscribe_thread(thread_id.clone());
             }
@@ -1112,6 +1242,20 @@ impl Workspace {
                     )),
                 )
             })
+            .when(thread.is_some() && !self.renaming, |el| {
+                el.child(
+                    button(
+                        "diff",
+                        format!("Changes  {}", window.keystroke_text_for(&ToggleDiff)),
+                        p,
+                    )
+                    .on_click(cx.listener(
+                        |this, _: &ClickEvent, window, cx| {
+                            this.toggle_diff(&ToggleDiff, window, cx)
+                        },
+                    )),
+                )
+            })
             .when(working, |el| {
                 el.child(
                     button(
@@ -1360,6 +1504,119 @@ impl Workspace {
             .into_any_element()
     }
 
+    fn render_diff(
+        &self,
+        diff: &DiffView,
+        p: Palette,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let code_font = cx.global::<Theme>().code_font.clone();
+        let turn = diff.range.as_ref().map(|(_, _, to)| *to).unwrap_or(0);
+        let caption = match (diff.last_turn_only, turn) {
+            (_, 0) => "No turns yet".to_string(),
+            (true, n) => format!("Turn {n}"),
+            (false, 1) => "Turn 1".to_string(),
+            (false, n) => format!("Turns 1–{n}"),
+        };
+        let scope_label = if diff.last_turn_only {
+            "Show all turns"
+        } else {
+            "Show last turn"
+        };
+        let header = div()
+            .h(px(44.))
+            .px_4()
+            .flex()
+            .items_center()
+            .gap_2()
+            .border_b_1()
+            .border_color(p.border)
+            .child(div().font_weight(FontWeight::SEMIBOLD).child("Changes"))
+            .child(div().flex_1().text_sm().text_color(p.muted).child(caption))
+            .child(
+                button(
+                    "diff-scope",
+                    format!(
+                        "{scope_label}  {}",
+                        window.keystroke_text_for(&ToggleDiffScope)
+                    ),
+                    p,
+                )
+                .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                    this.toggle_diff_scope(&ToggleDiffScope, window, cx)
+                })),
+            )
+            .child(
+                button("diff-close", "Close".into(), p).on_click(cx.listener(
+                    |this, _: &ClickEvent, window, cx| this.toggle_diff(&ToggleDiff, window, cx),
+                )),
+            );
+        let placeholder = |text: String| {
+            div()
+                .flex_1()
+                .flex()
+                .items_center()
+                .justify_center()
+                .px_6()
+                .text_color(p.muted)
+                .child(text)
+                .into_any_element()
+        };
+        let body = match &diff.state {
+            DiffState::Empty if self.selected_thread.is_none() => {
+                placeholder("Open a thread to see its changes.".into())
+            }
+            DiffState::Empty => placeholder("No file changes.".into()),
+            DiffState::Loading => placeholder("Loading…".into()),
+            DiffState::Failed(error) => placeholder(format!("Could not load the diff: {error}")),
+            DiffState::Ready(lines) => {
+                let lines = lines.clone();
+                uniform_list("diff-lines", lines.len(), move |range, _, _| {
+                    range
+                        .map(|i| {
+                            let (kind, text) = &lines[i];
+                            let text = match kind {
+                                DiffLineKind::File => {
+                                    SharedString::from(protocol::diff_file_path(text).to_string())
+                                }
+                                _ => text.clone(),
+                            };
+                            let row = div().px_4().whitespace_nowrap().child(text);
+                            match kind {
+                                DiffLineKind::File => {
+                                    row.bg(p.surface).font_weight(FontWeight::SEMIBOLD)
+                                }
+                                DiffLineKind::Meta => row.text_color(p.muted),
+                                DiffLineKind::Hunk => row.text_color(p.accent),
+                                DiffLineKind::Added => row.text_color(p.added),
+                                DiffLineKind::Removed => row.text_color(p.removed),
+                                DiffLineKind::Context => row,
+                            }
+                        })
+                        .collect()
+                })
+                .track_scroll(diff.scroll.clone())
+                .flex_1()
+                .py_2()
+                .text_sm()
+                .when_some(code_font, |el, font| el.font_family(font))
+                .into_any_element()
+            }
+        };
+        div()
+            .w(gpui::relative(0.5))
+            .h_full()
+            .flex()
+            .flex_col()
+            .border_l_1()
+            .border_color(p.border)
+            .bg(p.background)
+            .child(header)
+            .child(body)
+            .into_any_element()
+    }
+
     fn render_shortcuts(&self, p: Palette, window: &Window) -> AnyElement {
         let mut rows = div().flex().flex_col().gap_1();
         for (label, action) in listed_actions() {
@@ -1472,6 +1729,8 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::previous_thread))
             .on_action(cx.listener(Self::focus_composer))
             .on_action(cx.listener(Self::toggle_sidebar))
+            .on_action(cx.listener(Self::toggle_diff))
+            .on_action(cx.listener(Self::toggle_diff_scope))
             .on_action(cx.listener(Self::toggle_shortcuts))
             .on_action(cx.listener(Self::stop_thread))
             .on_action(cx.listener(Self::archive_thread))
@@ -1511,7 +1770,10 @@ impl Render for Workspace {
                 .when(self.sidebar_visible, |el| {
                     el.child(self.render_sidebar(p, window, cx))
                 })
-                .child(main),
+                .child(main)
+                .when_some(self.diff.as_ref(), |el, diff| {
+                    el.child(self.render_diff(diff, p, window, cx))
+                }),
         )
         .when(self.shortcuts_visible, |el| {
             el.child(self.render_shortcuts(p, window))

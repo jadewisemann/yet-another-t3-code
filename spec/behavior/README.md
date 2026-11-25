@@ -16,3 +16,4 @@
 | `auth.md` | P1 |
 | `runs.md` | P2 |
 | `titles.md` | P2 |
+| `diffs.md` | P3 |
