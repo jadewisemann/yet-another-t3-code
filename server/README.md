@@ -1,6 +1,6 @@
 # yatt-server
 
-T3 Code 서버의 Go 구현입니다. 지금은 P0 골격 단계이며, 계획은 `docs/go-port/PLAN.md`, 구현 범위는 `spec/coverage.md`에 있습니다.
+T3 Code 서버의 Go 구현입니다. 지금은 P1 진행 중이며, 계획은 `docs/go-port/PLAN.md`, 구현 범위는 `spec/coverage.md`에 있습니다.
 
 ```sh
 cd server
@@ -19,3 +19,4 @@ go run ./cmd/yatt-server auth session issue --token-only
 | `internal/spec` | `rpc.json` 로딩과 JSON Schema 검증 |
 | `internal/conform` | 시나리오 실행, 정규화, 골든 비교 |
 | `internal/server` | HTTP/WebSocket 서버와 RPC 핸들러 |
+| `internal/store` | SQLite 이벤트 로그(`userdata/yatt-state.sqlite`)와 메모리 프로젝션 |

@@ -1,0 +1,160 @@
+package store
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// Event types. Their data is the struct of the same name below.
+const (
+	ProjectCreated        = "project.created"
+	ThreadCreated         = "thread.created"
+	ThreadMetadataUpdated = "thread.metadata-updated"
+	ThreadVisited         = "thread.visited"
+	ThreadArchived        = "thread.archived"
+	ThreadUnarchived      = "thread.unarchived"
+)
+
+type Project struct {
+	ID                    string          `json:"id"`
+	Title                 string          `json:"title"`
+	WorkspaceRoot         string          `json:"workspaceRoot"`
+	DefaultModelSelection json.RawMessage `json:"defaultModelSelection,omitempty"`
+	Scripts               json.RawMessage `json:"scripts,omitempty"`
+	CreatedAt             string          `json:"createdAt"`
+	UpdatedAt             string          `json:"updatedAt"`
+	ArchivedAt            *string         `json:"archivedAt,omitempty"`
+	DeletedAt             *string         `json:"deletedAt,omitempty"`
+}
+
+type Thread struct {
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"projectId"`
+	Title           string          `json:"title"`
+	CreatedBy       string          `json:"createdBy"`
+	CreationSource  string          `json:"creationSource"`
+	ModelSelection  json.RawMessage `json:"modelSelection"`
+	RuntimeMode     string          `json:"runtimeMode"`
+	InteractionMode string          `json:"interactionMode"`
+	Branch          *string         `json:"branch,omitempty"`
+	WorktreePath    *string         `json:"worktreePath,omitempty"`
+	CreatedAt       string          `json:"createdAt"`
+	UpdatedAt       string          `json:"updatedAt"`
+	ArchivedAt      *string         `json:"archivedAt,omitempty"`
+	LastVisitedAt   *string         `json:"lastVisitedAt,omitempty"`
+}
+
+type ThreadMetadata struct {
+	ThreadID     string  `json:"threadId"`
+	Title        *string `json:"title,omitempty"`
+	Branch       *string `json:"branch,omitempty"`
+	WorktreePath *string `json:"worktreePath,omitempty"`
+	At           string  `json:"at"`
+}
+
+type ThreadRef struct {
+	ThreadID string `json:"threadId"`
+	At       string `json:"at"`
+}
+
+// State is the in-memory projection of the log.
+type State struct {
+	Projects     map[string]*Project
+	ProjectOrder []string
+	Threads      map[string]*Thread
+	ThreadOrder  []string
+}
+
+func newState() *State {
+	return &State{Projects: map[string]*Project{}, Threads: map[string]*Thread{}}
+}
+
+func (s *State) clone() *State {
+	c := newState()
+	for k, v := range s.Projects {
+		p := *v
+		c.Projects[k] = &p
+	}
+	for k, v := range s.Threads {
+		t := *v
+		c.Threads[k] = &t
+	}
+	c.ProjectOrder = append([]string(nil), s.ProjectOrder...)
+	c.ThreadOrder = append([]string(nil), s.ThreadOrder...)
+	return c
+}
+
+func (s *State) apply(e Event) error {
+	switch e.Type {
+	case ProjectCreated:
+		var p Project
+		if err := json.Unmarshal(e.Data, &p); err != nil {
+			return err
+		}
+		if _, ok := s.Projects[p.ID]; ok {
+			return fmt.Errorf("project %s already exists", p.ID)
+		}
+		s.Projects[p.ID] = &p
+		s.ProjectOrder = append(s.ProjectOrder, p.ID)
+	case ThreadCreated:
+		var t Thread
+		if err := json.Unmarshal(e.Data, &t); err != nil {
+			return err
+		}
+		if _, ok := s.Threads[t.ID]; ok {
+			return fmt.Errorf("thread %s already exists", t.ID)
+		}
+		s.Threads[t.ID] = &t
+		s.ThreadOrder = append(s.ThreadOrder, t.ID)
+	case ThreadMetadataUpdated:
+		var m ThreadMetadata
+		if err := json.Unmarshal(e.Data, &m); err != nil {
+			return err
+		}
+		t, err := s.thread(m.ThreadID)
+		if err != nil {
+			return err
+		}
+		if m.Title != nil {
+			t.Title = *m.Title
+		}
+		if m.Branch != nil {
+			t.Branch = m.Branch
+		}
+		if m.WorktreePath != nil {
+			t.WorktreePath = m.WorktreePath
+		}
+		t.UpdatedAt = m.At
+	case ThreadVisited, ThreadArchived, ThreadUnarchived:
+		var r ThreadRef
+		if err := json.Unmarshal(e.Data, &r); err != nil {
+			return err
+		}
+		t, err := s.thread(r.ThreadID)
+		if err != nil {
+			return err
+		}
+		at := r.At
+		switch e.Type {
+		case ThreadVisited:
+			t.LastVisitedAt = &at
+		case ThreadArchived:
+			t.ArchivedAt = &at
+			t.UpdatedAt = at
+		case ThreadUnarchived:
+			t.ArchivedAt = nil
+			t.UpdatedAt = at
+		}
+	default:
+		return fmt.Errorf("unknown event type %q", e.Type)
+	}
+	return nil
+}
+
+func (s *State) thread(id string) (*Thread, error) {
+	t, ok := s.Threads[id]
+	if !ok {
+		return nil, fmt.Errorf("thread %s does not exist", id)
+	}
+	return t, nil
+}

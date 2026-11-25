@@ -1,0 +1,76 @@
+{
+  "scenario": "dispatch-errors",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "as": "create-without-project",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 1
+        }
+      }
+    },
+    {
+      "step": 1,
+      "op": "call",
+      "as": "archive-missing",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Fail",
+            "error": {
+              "_tag": "OrchestrationV2DispatchCommandError",
+              "cause": {
+                "cause": {
+                  "message": "No orchestration projection exists for thread <uuid:missing-thread>.",
+                  "name": "ProjectionStoreThreadNotFoundError"
+                },
+                "message": "Failed to load orchestration projection for thread <uuid:missing-thread>.",
+                "name": "OrchestratorProjectionError"
+              },
+              "commandId": "<uuid:cmd-archive>",
+              "commandType": "thread.archive",
+              "detail": "No orchestration projection exists for thread <uuid:missing-thread>.",
+              "message": "No orchestration projection exists for thread <uuid:missing-thread>."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "step": 2,
+      "op": "call",
+      "as": "rename-missing",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Fail",
+            "error": {
+              "_tag": "OrchestrationV2DispatchCommandError",
+              "cause": {
+                "cause": {
+                  "message": "No orchestration projection exists for thread <uuid:missing-thread>.",
+                  "name": "ProjectionStoreThreadNotFoundError"
+                },
+                "message": "Failed to load orchestration projection for thread <uuid:missing-thread>.",
+                "name": "OrchestratorProjectionError"
+              },
+              "commandId": "<uuid:cmd-rename>",
+              "commandType": "thread.metadata.update",
+              "detail": "No orchestration projection exists for thread <uuid:missing-thread>.",
+              "message": "No orchestration projection exists for thread <uuid:missing-thread>."
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
