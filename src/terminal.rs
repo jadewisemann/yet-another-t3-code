@@ -119,6 +119,9 @@ impl TerminalPanel {
                 }
                 // History replays old answers' questions; only live output gets answers.
                 self.replies.0.borrow_mut().clear();
+                // A snapshot also follows a reconnect, which drops a write still on its way.
+                self.in_flight = false;
+                self.queued.clear();
                 self.state = match snapshot.get("status").and_then(Value::as_str) {
                     Some("running") => ShellState::Running,
                     Some("starting") => ShellState::Starting,

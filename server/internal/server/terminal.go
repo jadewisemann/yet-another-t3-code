@@ -528,17 +528,21 @@ func (m *terminalManager) open(in terminalInput) (map[string]any, error) {
 		t.history.clear()
 		t.pendingControl = ""
 	}
+	cols, rows := t.cols, t.rows
 	if in.Cols != nil {
-		t.cols = *in.Cols
+		cols = *in.Cols
 	}
 	if in.Rows != nil {
-		t.rows = *in.Rows
+		rows = *in.Rows
 	}
 	if t.cmd == nil {
+		t.cols, t.rows = cols, rows
 		m.start(t, "started")
 		return t.snapshot(), nil
 	}
-	m.resize(t, t.cols, t.rows)
+	if cols != t.cols || rows != t.rows {
+		m.resize(t, cols, rows)
+	}
 	return t.snapshot(), nil
 }
 
