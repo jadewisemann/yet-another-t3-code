@@ -44,10 +44,22 @@ type runIDs struct {
 	ordinal                                                    int
 }
 
-func newRunIDs(threadID, instanceID string, ordinal int, providerThread string) runIDs {
+// driverOf is the driver of a provider instance: the built-in instances
+// are named after their drivers.
+func driverOf(instance string) string {
+	if instance == claudeDriver {
+		return claudeDriver
+	}
+	return "codex"
+}
+
+func newRunIDs(threadID, instanceID, driver string, ordinal int, providerThread, session string) runIDs {
 	run := fmt.Sprintf("run:thread:%s:ordinal:%d", threadID, ordinal)
 	if providerThread == "" {
-		providerThread = "provider-thread:provider:codex:native-thread:" + encodeURIComponent("pending:"+run)
+		providerThread = "provider-thread:provider:" + driver + ":native-thread:" + encodeURIComponent("pending:"+run)
+	}
+	if session == "" {
+		session = "provider-session:provider-instance:" + instanceID + ":shared"
 	}
 	return runIDs{
 		thread:         threadID,
@@ -55,7 +67,7 @@ func newRunIDs(threadID, instanceID string, ordinal int, providerThread string) 
 		attempt:        "run-attempt:run:" + encodeURIComponent(run) + ":attempt:1",
 		root:           "node:run:" + encodeURIComponent(run) + ":root",
 		providerThread: providerThread,
-		session:        "provider-session:provider-instance:" + instanceID + ":shared",
+		session:        session,
 		scope:          "checkpoint-scope:thread:" + threadID + ":name:root",
 		ordinal:        ordinal,
 	}
@@ -118,6 +130,7 @@ func (r *runState) append(ctx context.Context, events ...event) error {
 type runState struct {
 	srv           *Server
 	ids           runIDs
+	driver        string // "codex" or "claudeAgent"
 	instance      string
 	model         string
 	modelSel      json.RawMessage
@@ -144,6 +157,12 @@ type runState struct {
 	mu            sync.Mutex // guards itemOrdinal and providerTurn, which stop requests read
 	stopRequest   string     // the interrupt-request turn item, once stopped
 	answers       chan requestAnswer
+	nativeMeta    map[string]any  // the provider thread's nativeMetadata (Claude)
+	contextUsage  map[string]any  // the provider thread's contextUsage (Claude)
+	turnRef       map[string]any  // the provider turn's nativeTurnRef (Claude)
+	tokenUsage    map[string]any  // the provider turn's latest tokenUsage (Claude)
+	turnModel     string          // the model the provider turn reported (Claude)
+	turnUsage     map[string]any  // the finished turn's turnTokenUsage (Claude)
 	workspacePrep json.RawMessage // the launch's workspace strategy, for a deferred run
 	preparing     bool            // the run waits for its workspace and has no checkpoint scope yet
 	prepOrdinal   int             // the workspace preparation item's ordinal
@@ -205,27 +224,51 @@ func (r *runState) rootNode(status string, completedAt any) map[string]any {
 func (r *runState) providerThread(status string) map[string]any {
 	var native any
 	if r.nativeThread != "" {
-		native = map[string]any{"driver": "codex", "nativeId": r.nativeThread, "strength": "strong"}
+		native = map[string]any{"driver": r.driver, "nativeId": r.nativeThread, "strength": "strong"}
+	}
+	var meta any
+	if r.nativeMeta != nil {
+		meta = r.nativeMeta
 	}
 	return map[string]any{
-		"id": r.ids.providerThread, "driver": "codex", "providerInstanceId": r.instance,
+		"id": r.ids.providerThread, "driver": r.driver, "providerInstanceId": r.instance,
 		"providerSessionId": r.ids.session, "appThreadId": r.ids.thread, "ownerNodeId": nil,
 		"nativeThreadRef": native, "nativeConversationHeadRef": nil, "status": status,
 		"firstRunOrdinal": r.ptFirstRun, "lastRunOrdinal": r.ids.ordinal, "handoffIds": []any{},
-		"forkedFrom": nil, "pendingBackgroundTasks": []any{}, "contextUsage": nil,
-		"nativeMetadata": nil, "goal": nil, "createdAt": r.ptCreatedAt, "updatedAt": store.Now(),
+		"forkedFrom": nil, "pendingBackgroundTasks": []any{}, "contextUsage": r.contextUsageValue(),
+		"nativeMetadata": meta, "goal": nil, "createdAt": r.ptCreatedAt, "updatedAt": store.Now(),
 	}
 }
 
+func (r *runState) contextUsageValue() any {
+	if r.contextUsage == nil {
+		return nil
+	}
+	return r.contextUsage
+}
+
 func (r *runState) providerTurnPayload(status string, completedAt any) map[string]any {
+	ref := r.turnRef
+	if ref == nil {
+		ref = map[string]any{"driver": r.driver, "nativeId": r.turnID, "strength": "strong"}
+	}
 	m := map[string]any{
 		"id": r.providerTurn, "providerThreadId": r.ids.providerThread, "nodeId": r.ids.root,
-		"runAttemptId":  r.ids.attempt,
-		"nativeTurnRef": map[string]any{"driver": "codex", "nativeId": r.turnID, "strength": "strong"},
-		"ordinal":       r.ids.ordinal, "status": status, "startedAt": r.turnStarted, "completedAt": completedAt,
+		"runAttemptId": r.ids.attempt, "nativeTurnRef": ref,
+		"ordinal": r.ids.ordinal, "status": status, "startedAt": r.turnStarted, "completedAt": completedAt,
 	}
 	if completedAt != nil {
-		m["turnTokenUsage"] = map[string]any{"usageScope": "main_agent", "hasSubagents": false, "usageStatus": "unavailable"}
+		if r.turnUsage != nil {
+			m["turnTokenUsage"] = r.turnUsage
+		} else {
+			m["turnTokenUsage"] = map[string]any{"usageScope": "main_agent", "hasSubagents": false, "usageStatus": "unavailable"}
+		}
+	}
+	if r.tokenUsage != nil {
+		m["tokenUsage"] = r.tokenUsage
+	}
+	if r.turnModel != "" {
+		m["model"] = r.turnModel
 	}
 	return m
 }
@@ -297,6 +340,7 @@ var activeRunStatuses = map[string]bool{"preparing": true, "queued": true, "star
 // its checkpoint follows the scope's latest checkpoint.
 func (s *Server) newRunState(st *store.State, t *store.Thread, ordinal int, messageID, text, requestedAt string, modelSel json.RawMessage) (*runState, *store.Entity) {
 	instance, _ := providerInstanceID(t).(string)
+	driver := driverOf(instance)
 	var sel struct {
 		Model string `json:"model"`
 	}
@@ -311,12 +355,21 @@ func (s *Server) newRunState(st *store.State, t *store.Thread, ordinal int, mess
 	existingPT := ""
 	var pt *store.Entity
 	for _, e := range t.Proj.List("providerThreads") {
-		if e.String("appThreadId") == t.ID && e.String("driver") == "codex" {
+		if e.String("appThreadId") == t.ID && e.String("driver") == driver {
 			pt, existingPT = e, e.ID
 		}
 	}
+	session := ""
+	if driver == claudeDriver {
+		// A Claude session belongs to one thread (upstream ClaudeAdapterV2).
+		if pt != nil {
+			session = pt.String("providerSessionId")
+		} else if u, err := newUUID(); err == nil {
+			session = "provider-session:provider-instance:" + instance + ":thread:" + t.ID + ":" + u
+		}
+	}
 	r := &runState{
-		srv: s, ids: newRunIDs(t.ID, instance, ordinal, existingPT), instance: instance,
+		srv: s, ids: newRunIDs(t.ID, instance, driver, ordinal, existingPT, session), driver: driver, instance: instance,
 		model: sel.Model, modelSel: modelSel, cwd: cwd, title: t.Title, text: text,
 		userMessageID: messageID, requestedAt: requestedAt, ptCreatedAt: requestedAt, ptFirstRun: ordinal,
 		stop: make(chan struct{}),
@@ -327,6 +380,18 @@ func (s *Server) newRunState(st *store.State, t *store.Thread, ordinal int, mess
 		r.ptFirstRun = int(pt.Number("firstRunOrdinal"))
 		if ref, ok := pt.Field("nativeThreadRef").(map[string]any); ok {
 			r.nativeThread, _ = ref["nativeId"].(string)
+		}
+		if meta, ok := pt.Field("nativeMetadata").(map[string]any); ok {
+			r.nativeMeta = meta
+		}
+		// The context in use is what the thread's last Claude turn reported.
+		for _, turn := range t.Proj.List("providerTurns") {
+			if turn.String("providerThreadId") != pt.ID {
+				continue
+			}
+			if u, ok := turn.Field("tokenUsage").(map[string]any); ok {
+				r.contextUsage = map[string]any{"usedTokens": u["usedTokens"], "maxTokens": u["maxTokens"]}
+			}
 		}
 	}
 	ckpts := 0
@@ -377,7 +442,7 @@ func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMe
 			return nil, threadNotFound(tc)
 		}
 		instance, _ := providerInstanceID(t).(string)
-		if instance != "codex" {
+		if instance != "codex" && instance != claudeDriver {
 			return nil, dispatchError(tc, fmt.Sprintf("yatt-server does not run provider %q yet", instance))
 		}
 		// A message sent while a run is active waits behind it (RUN-10),
@@ -424,7 +489,7 @@ func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMe
 			if pt != nil {
 				ptStatus = pt.String("status")
 			}
-			evs = append(evs, event{cause: cause, typ: "provider-thread.updated", driver: "codex", payload: r.providerThread(ptStatus)})
+			evs = append(evs, event{cause: cause, typ: "provider-thread.updated", driver: r.driver, payload: r.providerThread(ptStatus)})
 		}
 		status := "starting"
 		if queued {
@@ -544,6 +609,11 @@ func (rn *runner) promoteQueued(ctx context.Context, threadID string) error {
 		r, _ = rn.srv.newRunState(st, t, int(next.Number("ordinal")), msg.ID, msg.String("text"), next.String("requestedAt"), modelSel)
 		attachments, _ := json.Marshal(msg.Field("attachments"))
 		now := store.Now()
+		// Upstream records the last turn's context usage after the queued
+		// run is promoted, so the promotion does not show it yet.
+		contextUsage := r.contextUsage
+		r.contextUsage = nil
+		defer func() { r.contextUsage = contextUsage }()
 		return r.drafts(
 			event{typ: "provider-thread.updated", payload: r.providerThread("not_loaded")},
 			event{typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root,
@@ -570,13 +640,14 @@ type runner struct {
 	client       *codex.Client
 	loaded       map[string]bool            // native thread ids loaded in client
 	active       map[string]*runState       // by app thread id
-	pending      map[string]*pendingRequest // codex requests waiting for the user, by runtime request id
+	pending      map[string]*pendingRequest // provider requests waiting for the user, by runtime request id
+	claudes      map[string]*claudeSession  // running Claude CLIs, by app thread id
 	allowedKinds map[string]map[string]bool // native thread -> request kinds accepted for the session
 }
 
 func newRunner(s *Server) *runner {
 	return &runner{srv: s, loaded: map[string]bool{}, active: map[string]*runState{},
-		pending: map[string]*pendingRequest{}, allowedKinds: nil}
+		pending: map[string]*pendingRequest{}, claudes: map[string]*claudeSession{}, allowedKinds: nil}
 }
 
 func (rn *runner) waitFor(id string, pr *pendingRequest) {
@@ -716,6 +787,7 @@ func (rn *runner) ensureClient(ctx context.Context, cwd string) (*codex.Client, 
 }
 
 func (rn *runner) close() {
+	rn.closeClaudes()
 	rn.mu.Lock()
 	c := rn.client
 	rn.client = nil
@@ -726,6 +798,9 @@ func (rn *runner) close() {
 }
 
 func (rn *runner) run(r *runState) error {
+	if r.driver == claudeDriver {
+		return rn.runClaude(r)
+	}
 	ctx := context.Background()
 	c, err := rn.ensureClient(ctx, r.cwd)
 	if err != nil {
@@ -736,18 +811,18 @@ func (rn *runner) run(r *runState) error {
 		now := store.Now()
 		session := func() map[string]any {
 			return map[string]any{
-				"id": r.ids.session, "driver": "codex", "providerInstanceId": r.instance, "status": "ready",
+				"id": r.ids.session, "driver": r.driver, "providerInstanceId": r.instance, "status": "ready",
 				"cwd": r.cwd, "model": r.model, "capabilities": codexCapabilities, "extensionStatuses": []any{},
 				"createdAt": now, "updatedAt": store.Now(), "lastError": nil,
 			}
 		}
 		if err := r.append(ctx,
-			event{cause: sessionCause, typ: "provider-session.attached", driver: "codex", payload: session()},
-			event{cause: sessionCause, typ: "provider-session.updated", driver: "codex", payload: session()},
+			event{cause: sessionCause, typ: "provider-session.attached", driver: r.driver, payload: session()},
+			event{cause: sessionCause, typ: "provider-session.updated", driver: r.driver, payload: session()},
 		); err != nil {
 			return err
 		}
-	} else if err := r.append(ctx, event{cause: sessionCause, typ: "provider-session.updated", driver: "codex", payload: r.session.Payload}); err != nil {
+	} else if err := r.append(ctx, event{cause: sessionCause, typ: "provider-session.updated", driver: r.driver, payload: r.session.Payload}); err != nil {
 		return err
 	}
 	rn.mu.Lock()
@@ -790,7 +865,7 @@ func (rn *runner) run(r *runState) error {
 	}
 	r.startedAt = store.Now()
 	if err := r.append(ctx,
-		event{typ: "provider-thread.updated", driver: "codex", payload: r.providerThread("active")},
+		event{typ: "provider-thread.updated", driver: r.driver, payload: r.providerThread("active")},
 		event{typ: "run.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload("running", nil, nil)},
 		event{typ: "run-attempt.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload("running", nil)},
 		event{typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("running", nil)},
@@ -876,10 +951,19 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 	}
 	done := store.Now()
 	ended := []event{
-		{cause: sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
+		{cause: sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root, driver: r.driver,
 			payload: r.providerTurnPayload(runStatus, done)},
-		{typ: "run-attempt.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload(runStatus, done)},
 	}
+	if r.driver == claudeDriver {
+		// Claude reports the provider thread with the turn's end.
+		ptStatus := "active"
+		if runStatus == "interrupted" {
+			ptStatus = "idle"
+		}
+		ended = append(ended, event{cause: sessionCause, typ: "provider-thread.updated", runID: r.ids.run, nodeID: r.ids.root,
+			driver: r.driver, payload: r.providerThread(ptStatus)})
+	}
+	ended = append(ended, event{typ: "run-attempt.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload(runStatus, done)})
 	r.mu.Lock()
 	request := r.stopRequest
 	r.mu.Unlock()
@@ -935,14 +1019,14 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 	}
 	var evs []event
 	if b := r.baseline; b != nil {
-		evs = append(evs, event{cause: effect, typ: "checkpoint.captured", nodeID: r.ids.root, driver: "codex",
+		evs = append(evs, event{cause: effect, typ: "checkpoint.captured", nodeID: r.ids.root, driver: r.driver,
 			payload: checkpoint(0, nil, nil, nil, b.ref, b.status, b.at, []any{})})
 	}
 	evs = append(evs,
-		event{cause: effect, typ: "checkpoint.captured", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
+		event{cause: effect, typ: "checkpoint.captured", runID: r.ids.run, nodeID: r.ids.root, driver: r.driver,
 			payload: checkpoint(ordinal, r.ids.run, r.parent, r.ids.ordinal, ref, status, at, files)},
-		event{cause: effect, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex", payload: map[string]any{
-			"id":       "turn-item:provider:codex:native-item:" + encodeURIComponent("checkpoint:"+ckptID),
+		event{cause: effect, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, driver: r.driver, payload: map[string]any{
+			"id":       itemTurnItemID(r.driver, "checkpoint:"+ckptID),
 			"threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
 			"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
 			"parentItemId": nil, "ordinal": r.nextItemOrdinal(), "status": "completed", "title": nil,
@@ -983,7 +1067,7 @@ const workspacePreparationInput = "Preparing workspace"
 // run's workspace preparation (spec/behavior/runs.md RUN-20).
 func (r *runState) preparationItem(status, at string) map[string]any {
 	m := map[string]any{
-		"id":       "turn-item:provider:codex:native-item:" + encodeURIComponent("workspace-preparation:"+r.ids.run),
+		"id":       itemTurnItemID(r.driver, "workspace-preparation:"+r.ids.run),
 		"threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
 		"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
 		"parentItemId": nil, "status": status, "title": workspacePreparationInput,
