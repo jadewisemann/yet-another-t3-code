@@ -1,2 +1,4 @@
 /target
 *.log
+.cache/
+tools/spec-extract/node_modules/

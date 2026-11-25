@@ -1,0 +1,20 @@
+{
+  "description": "Creating a project through projects.mutate shows up on an open shell stream.",
+  "tier": "p1",
+  "steps": [
+    { "op": "subscribe", "as": "shell", "method": "orchestration.subscribeShell", "payload": {} },
+    { "op": "await", "stream": "shell", "match": { "kind": "snapshot" } },
+    {
+      "op": "call", "as": "create", "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    { "op": "await", "stream": "shell", "match": { "kind": "project.updated" } },
+    { "op": "interrupt", "stream": "shell" }
+  ]
+}

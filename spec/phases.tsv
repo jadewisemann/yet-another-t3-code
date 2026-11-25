@@ -1,0 +1,36 @@
+# Which porting phase implements which RPC method. First matching pattern wins
+# (`*` matches any run of characters). See docs/go-port/PLAN.md for the phases.
+pattern	phase
+orchestration.subscribeShell	P1
+orchestration.subscribeThread	P1
+orchestration.dispatchCommand	P1
+orchestration.launchThread	P1
+orchestration.getThreadProjection	P1
+orchestration.getArchivedShellSnapshot	P1
+orchestration.getThreadTitles	P1
+projects.mutate	P1
+projects.createNew	P1
+projects.ensureScratch	P1
+server.getConfig	P1
+server.probe	P1
+subscribeServerConfig	P1
+subscribeServerLifecycle	P1
+subscribeAuthAccess	P1
+provider.*	P2
+server.refreshProviders	P2
+server.updateProvider	P2
+orchestration.forceStopThread	P2
+orchestration.*	P3
+attachments.*	P3
+assets.*	P3
+projects.*	P3
+filesystem.*	P3
+terminal.*	P3
+subscribeTerminalMetadata	P3
+git.*	P3
+vcs.*	P3
+subscribeVcs*	P3
+worktreeSetup.*	P3
+subscribeWorktreeSetup	P3
+server.*	P3
+*	P4

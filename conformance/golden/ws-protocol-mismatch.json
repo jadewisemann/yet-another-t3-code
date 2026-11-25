@@ -1,0 +1,28 @@
+{
+  "scenario": "ws-protocol-mismatch",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "http",
+      "as": "/ws",
+      "status": 426,
+      "body": {
+        "code": "orchestration_protocol_incompatible",
+        "message": "Update this client to one that supports orchestration protocol 2.",
+        "orchestrationProtocolVersion": 2
+      }
+    },
+    {
+      "step": 1,
+      "op": "http",
+      "as": "/ws?orchestrationProtocol=1",
+      "status": 426,
+      "body": {
+        "code": "orchestration_protocol_incompatible",
+        "message": "Update this client to one that supports orchestration protocol 2.",
+        "orchestrationProtocolVersion": 2
+      }
+    }
+  ]
+}

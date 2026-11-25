@@ -1,0 +1,97 @@
+{
+  "scenario": "project-create",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 1,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [],
+            "schemaVersion": 2,
+            "snapshotSequence": 0,
+            "threads": []
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "op": "call",
+      "as": "create",
+      "method": "projects.mutate",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "archivedAt": null,
+          "autoPull": false,
+          "createdAt": "<time>",
+          "defaultModelSelection": null,
+          "defaultThreadEnvMode": null,
+          "deletedAt": null,
+          "faviconPath": null,
+          "id": "<uuid:project>",
+          "pinnedAt": null,
+          "projectIcon": null,
+          "repositoryIdentity": null,
+          "scripts": [],
+          "title": "workspace",
+          "updatedAt": "<time>",
+          "workspaceRoot": "<workspace>"
+        }
+      }
+    },
+    {
+      "step": 3,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "project.updated",
+          "project": {
+            "archivedAt": null,
+            "autoPull": false,
+            "createdAt": "<time>",
+            "defaultModelSelection": null,
+            "defaultThreadEnvMode": null,
+            "faviconPath": null,
+            "hasCustomTitle": false,
+            "id": "<uuid:project>",
+            "pinnedAt": null,
+            "projectIcon": null,
+            "repositoryIdentity": null,
+            "scripts": [],
+            "title": "workspace",
+            "updatedAt": "<time>",
+            "workspaceRoot": "<workspace>"
+          },
+          "sequence": 1
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "op": "interrupt",
+      "as": "shell",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    }
+  ]
+}

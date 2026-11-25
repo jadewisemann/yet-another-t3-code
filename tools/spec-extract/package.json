@@ -1,0 +1,12 @@
+{
+  "name": "yatt-spec-extract",
+  "private": true,
+  "type": "module",
+  "description": "Generates machine-readable specs from an upstream T3 Code checkout.",
+  "scripts": {
+    "extract": "bun extract.ts"
+  },
+  "dependencies": {
+    "effect": "4.1.5"
+  }
+}

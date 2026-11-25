@@ -1,0 +1,7 @@
+{
+  "description": "A WebSocket upgrade with the right protocol version but no bearer token is refused before any RPC.",
+  "tier": "p1",
+  "steps": [
+    { "op": "http", "path": "/ws?orchestrationProtocol=2&clientSurface=desktop", "record": "status" }
+  ]
+}

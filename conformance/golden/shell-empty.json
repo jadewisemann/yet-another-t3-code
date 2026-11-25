@@ -1,0 +1,83 @@
+{
+  "scenario": "shell-empty",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "subscribe",
+      "as": "plain",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 1,
+      "op": "await",
+      "as": "plain",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [],
+            "schemaVersion": 2,
+            "snapshotSequence": 0,
+            "threads": []
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "op": "interrupt",
+      "as": "plain",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    },
+    {
+      "step": 3,
+      "op": "subscribe",
+      "as": "marked",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 4,
+      "op": "await",
+      "as": "marked",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [],
+            "schemaVersion": 2,
+            "snapshotSequence": 0,
+            "threads": []
+          }
+        },
+        {
+          "kind": "synchronized"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "op": "interrupt",
+      "as": "marked",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    }
+  ]
+}

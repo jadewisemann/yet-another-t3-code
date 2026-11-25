@@ -1,0 +1,20 @@
+{
+  "scenario": "unknown-method",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "method": "yatt.doesNotExist",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Die",
+            "defect": "Unknown request tag: yatt.doesNotExist"
+          }
+        ]
+      }
+    }
+  ]
+}
