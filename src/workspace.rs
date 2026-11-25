@@ -39,6 +39,8 @@ pub struct Workspace {
     selected_thread: Option<String>,
     /// Set while composing the first message of a new thread in this project.
     draft_project: Option<String>,
+    /// The model new threads start on, once picked; otherwise the latest thread's.
+    new_thread_model: Option<serde_json::Value>,
     messages: Vec<ConversationMessage>,
     messages_loaded: bool,
     /// Approvals and questions in the open thread, by turn item id.
@@ -108,6 +110,7 @@ impl Workspace {
             shell_synced: false,
             selected_thread: None,
             draft_project: None,
+            new_thread_model: None,
             messages: Vec::new(),
             messages_loaded: false,
             requests: Vec::new(),
@@ -326,6 +329,52 @@ impl Workspace {
             .collect()
     }
 
+    /// The model and modes a new thread in the project starts with: the latest thread's
+    /// (see rpc::launch_defaults_from), with the model the user picked, if any.
+    fn launch_defaults(&self, project_id: &str) -> protocol::LaunchDefaults {
+        let project = self.projects.iter().find(|p| p.id == project_id);
+        let recent = self
+            .threads
+            .values()
+            .filter(|t| t.project_id == project_id && t.model_selection.is_some())
+            .max_by(|a, b| a.sort_key().cmp(b.sort_key()))
+            .or_else(|| {
+                self.threads
+                    .values()
+                    .max_by(|a, b| a.sort_key().cmp(b.sort_key()))
+            });
+        let mut defaults = rpc::launch_defaults_from(recent, project);
+        if let Some(model) = &self.new_thread_model {
+            defaults.model_selection = model.clone();
+        }
+        defaults
+    }
+
+    /// The model the next new thread starts on.
+    fn new_thread_model(&self) -> serde_json::Value {
+        match self.current_project_id() {
+            Some(project_id) => self.launch_defaults(&project_id).model_selection,
+            None => self.new_thread_model.clone().unwrap_or_else(|| {
+                let (instance, model) = protocol::DEFAULT_MODEL_SELECTION;
+                protocol::model_selection(instance, model)
+            }),
+        }
+    }
+
+    fn cycle_model(&mut self, _: &CycleModel, _: &mut Window, cx: &mut Context<Self>) {
+        let next = protocol::next_model(&self.new_thread_model());
+        self.notice = Some(if self.current_thread().is_some() {
+            format!(
+                "New threads start on {}. This thread keeps its model.",
+                protocol::model_label(&next)
+            )
+        } else {
+            format!("This thread starts on {}.", protocol::model_label(&next))
+        });
+        self.new_thread_model = Some(next);
+        cx.notify();
+    }
+
     fn current_thread(&self) -> Option<&ThreadShell> {
         self.selected_thread
             .as_ref()
@@ -385,18 +434,7 @@ impl Workspace {
                 protocol::send_message(&thread.id, &text, thread.is_working()),
             );
         } else if let Some(project_id) = self.current_project_id() {
-            let project = self.projects.iter().find(|p| p.id == project_id);
-            let recent = self
-                .threads
-                .values()
-                .filter(|t| t.project_id == project_id && t.model_selection.is_some())
-                .max_by(|a, b| a.sort_key().cmp(b.sort_key()))
-                .or_else(|| {
-                    self.threads
-                        .values()
-                        .max_by(|a, b| a.sort_key().cmp(b.sort_key()))
-                });
-            let defaults = rpc::launch_defaults_from(recent, project);
+            let defaults = self.launch_defaults(&project_id);
             rpc.launch_thread(protocol::launch_thread(&project_id, &defaults, &text));
         } else {
             self.notice = Some("Add a project first: choose its folder with Add project.".into());
@@ -1258,13 +1296,40 @@ impl Workspace {
         any.then(|| div().px_8().pt_2().child(cards).into_any_element())
     }
 
-    fn render_composer(&self, p: Palette, window: &Window) -> AnyElement {
+    fn render_composer(&self, p: Palette, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let hint = format!(
             "Enter to send · {} new thread · {} rename · {} shortcuts",
             window.keystroke_text_for(&NewThread),
             window.keystroke_text_for(&RenameThread),
             window.keystroke_text_for(&ToggleShortcuts),
         );
+        // An open thread shows its own model; a new thread shows the one it will start on,
+        // which a click or the CycleModel key changes.
+        let model = match self.current_thread() {
+            Some(thread) => {
+                let label = thread
+                    .model_selection
+                    .as_ref()
+                    .map(protocol::model_label)
+                    .unwrap_or_else(|| "Default model".into());
+                div().text_color(p.muted).child(label).into_any_element()
+            }
+            None => {
+                let keys = window.keystroke_text_for(&CycleModel);
+                let label = protocol::model_label(&self.new_thread_model());
+                let label = if keys.is_empty() {
+                    label
+                } else {
+                    format!("{label} · {keys}")
+                };
+                dynamic_button("model-picker".into(), label, p)
+                    .text_xs()
+                    .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                        this.cycle_model(&CycleModel, window, cx)
+                    }))
+                    .into_any_element()
+            }
+        };
         div()
             .px_8()
             .pb_5()
@@ -1289,7 +1354,7 @@ impl Workspace {
                     .justify_between()
                     .text_xs()
                     .text_color(p.muted)
-                    .child(hint)
+                    .child(div().flex().items_center().gap_3().child(model).child(hint))
                     .when_some(self.notice.clone(), |el, notice| el.child(notice)),
             )
             .into_any_element()
@@ -1401,6 +1466,7 @@ impl Render for Workspace {
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::new_thread))
             .on_action(cx.listener(Self::add_project))
+            .on_action(cx.listener(Self::cycle_model))
             .on_action(cx.listener(Self::rename_thread))
             .on_action(cx.listener(Self::next_thread))
             .on_action(cx.listener(Self::previous_thread))
@@ -1436,7 +1502,7 @@ impl Render for Workspace {
             .child(self.render_header(p, window, cx))
             .child(self.render_messages(p, cx))
             .children(self.render_requests(p, cx))
-            .child(self.render_composer(p, window));
+            .child(self.render_composer(p, window, cx));
 
         root.child(
             div()
