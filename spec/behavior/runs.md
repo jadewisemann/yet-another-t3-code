@@ -46,8 +46,19 @@
 - RUN-12. 두 번째 이후의 실행은 provider thread를 새로 만들지 않고, 그 상태(`idle`)를 유지한 채 `lastRunOrdinal`만 올립니다. 실행이 시작될 때 공유 세션은 `provider-session.updated`로 다시 기록되고(내용은 그대로), `checkpoint-scope.created`는 실행마다 새 `runId`로 다시 기록됩니다. 스레드의 `lastVisitedAt`은 첫 메시지에서만 기록됩니다. (`message-queue`)
 - RUN-13. 셸 요약의 `status`와 `latestRun*`은 가장 최근 실행(대기 실행 포함)을 따르고, `activityRun*`과 `activeRunId`는 대기 실행을 건너뛴 가장 최근의 시작된 실행을 따릅니다. 스냅샷의 `messages`는 그 메시지를 가리키는 turn item의 가장 작은 `ordinal` 순서이고, turn item이 없는 메시지(대기 중인 메시지)는 맨 뒤에 놓입니다. (`message-queue`)
 
+## 에이전트 항목
+
+- RUN-14. 노드와 turn item의 id는 codex 항목 id를 `encodeURIComponent`로 감싼 `node:provider:codex:native-item:<id>`, `turn-item:provider:codex:native-item:<id>`입니다. 시작 시각은 `item/started`의 `startedAtMs`이고, `ordinal`은 실행의 범위 안에서 처음 기록된 순서를 따릅니다. (`agent-items`)
+- RUN-15. 명령 실행(`commandExecution`)은 `item/started`에서 `tool_call` 노드와 `command_execution` 항목(`input`, `completionWake: "always"`)을 `running`으로 기록하고, `item/completed`에서 다시 기록합니다. 상태는 `inProgress`→`running`, `completed`→`completed`, `failed`→`failed`, `declined`→`cancelled`입니다. 출력과 종료 코드도 저장하지만, 클라이언트에 보내는 형태에서는 `output`을 빼고 출력이 있으면 `outputOmitted: true`, 실패로 보이면 `outputIndicatesFailure: true`를 붙입니다. (`agent-items`, `runtime-requests`)
+- RUN-16. 파일 변경(`fileChange`)은 `item/completed`에서만 `file_change` 항목(`fileName`은 첫 파일, `changes`는 `{operation, path}`)으로 기록됩니다. `diffStr`는 저장하지만 실패한 경우를 빼면 클라이언트에 보내지 않습니다. 추론(`reasoning`)은 요약과 본문의 조각마다 `[turnId, itemId, stream, index]`의 JSON을 id로 쓰는 `reasoning` 항목이 되고, 에이전트 메시지처럼 150ms 단위로 묶여 스트리밍됩니다. 스트리밍 중인 에이전트 메시지는 노드와 turn item만 갱신하고, `message.updated`는 완료될 때 한 번 보냅니다. (`agent-items`)
+
+## 승인 요청과 사용자 입력
+
+- RUN-17. codex의 `item/commandExecution/requestApproval`과 `item/fileChange/requestApproval`은 `approval_request` 노드(부모는 해당 항목 노드)와 turn item(`waiting`, `requestKind`, `prompt`), `runtime-request.updated`(`pending`, `responseCapability: live`)가 됩니다. 요청 id는 `runtime-request:provider:codex:provider-turn:<enc>:native-request:<enc>:<uuid>`입니다. `item/tool/requestUserInput`은 해당 항목 노드가 `user_input_request` 노드가 되고, 질문 목록이 turn item에 들어갑니다. 셸 요약의 `pendingRuntimeRequest`는 가장 먼저 생긴 대기 요청의 `{id, kind, createdAt, blocking: true}`입니다. (`runtime-requests`)
+- RUN-18. `runtime-request.respond`는 요청을 `resolved`(`decision` 또는 `answers` 포함)로 바꾸고, 노드와 turn item을 `completed`(거절과 취소는 `cancelled`)로 기록한 뒤 codex에 답합니다. 사용자 입력의 turn item에는 `questionAnswer`가 붙고, codex에는 `{<질문 id>: {answers: [...]}}`로 보냅니다. `acceptForSession`이나 `acceptAlways`로 승인하면 같은 codex 스레드의 같은 종류 요청은 묻지 않고 승인합니다. 대기 중이 아닌 요청에는 오류를 돌려줍니다. (`runtime-requests`)
+
 ## yatt-server 구현 메모
 
 - v2 이벤트(`run.*`, `node.updated`, `message.updated` 등)는 업스트림이 스레드 스트림에 보내는 봉투 그대로 저장하고, 업스트림의 `applyToProjection`처럼 id 기준 upsert로 접습니다(`server/internal/store/v2.go`). 스냅샷의 목록 순서는 업스트림 스냅샷 쿼리의 `ORDER BY`를 따릅니다.
 - codex 프로세스는 프로바이더 인스턴스마다 하나를 공유합니다(`provider-session:provider-instance:codex:shared`). 실행 파일은 `PATH`의 `codex`이고, `YATT_CODEX_BIN`으로 바꿀 수 있습니다.
-- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 승인 요청과 사용자 입력 요청(codex의 서버 요청은 오류로 응답), 명령 실행과 파일 변경 같은 에이전트 메시지 이외의 항목, 체크포인트의 `files` 목록, T3 MCP 도구와 추가 지시문(`additionalContext`).
+- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 권한 승인(`item/permissions/requestApproval`)과 MCP 도구, 웹 검색, 계획, 하위 에이전트 같은 나머지 항목(codex의 다른 서버 요청은 오류로 응답), 명령 출력 스트림(`subscribeCommandOutput`), 체크포인트의 `files` 목록, T3 MCP 도구와 추가 지시문(`additionalContext`).

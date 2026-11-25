@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/jadewisemann/yet-another-t3-code/server/internal/codex"
 	"github.com/jadewisemann/yet-another-t3-code/server/internal/store"
@@ -144,6 +143,7 @@ type runState struct {
 	stopOnce      sync.Once
 	mu            sync.Mutex // guards itemOrdinal and providerTurn, which stop requests read
 	stopRequest   string     // the interrupt-request turn item, once stopped
+	answers       chan requestAnswer
 }
 
 type checkpointInfo struct {
@@ -491,15 +491,67 @@ func (rn *runner) promoteQueued(ctx context.Context, threadID string) error {
 
 // runner owns the shared codex app-server process and the active runs.
 type runner struct {
-	srv    *Server
-	mu     sync.Mutex
-	client *codex.Client
-	loaded map[string]bool      // native thread ids loaded in client
-	active map[string]*runState // by app thread id
+	srv          *Server
+	mu           sync.Mutex
+	client       *codex.Client
+	loaded       map[string]bool            // native thread ids loaded in client
+	active       map[string]*runState       // by app thread id
+	pending      map[string]*pendingRequest // codex requests waiting for the user, by runtime request id
+	allowedKinds map[string]map[string]bool // native thread -> request kinds accepted for the session
 }
 
 func newRunner(s *Server) *runner {
-	return &runner{srv: s, loaded: map[string]bool{}, active: map[string]*runState{}}
+	return &runner{srv: s, loaded: map[string]bool{}, active: map[string]*runState{},
+		pending: map[string]*pendingRequest{}, allowedKinds: nil}
+}
+
+func (rn *runner) waitFor(id string, pr *pendingRequest) {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	rn.pending[id] = pr
+}
+
+func (rn *runner) pendingRequest(id string) *pendingRequest {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	return rn.pending[id]
+}
+
+func (rn *runner) takePending(id string) *pendingRequest {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	pr := rn.pending[id]
+	delete(rn.pending, id)
+	return pr
+}
+
+// dropPending forgets the requests of a run that ended.
+func (rn *runner) dropPending(r *runState) {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	for id, pr := range rn.pending {
+		if pr.run == r {
+			delete(rn.pending, id)
+		}
+	}
+}
+
+func (rn *runner) allowed(nativeThread, kind string) bool {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	return rn.allowedKinds[nativeThread][kind]
+}
+
+func (rn *runner) allow(nativeThread, kind string) {
+	rn.mu.Lock()
+	defer rn.mu.Unlock()
+	if rn.allowedKinds == nil {
+		rn.allowedKinds = map[string]map[string]bool{}
+	}
+	if rn.allowedKinds[nativeThread] == nil {
+		rn.allowedKinds[nativeThread] = map[string]bool{}
+	}
+	rn.allowedKinds[nativeThread][kind] = true
 }
 
 func (rn *runner) start(r *runState) {
@@ -511,6 +563,7 @@ func (rn *runner) start(r *runState) {
 			rn.srv.log.Warn("run failed", slog.String("run", r.ids.run), slog.String("error", err.Error()))
 			rn.fail(r, err)
 		}
+		rn.dropPending(r)
 		rn.mu.Lock()
 		if rn.active[r.ids.thread] == r {
 			delete(rn.active, r.ids.thread)
@@ -736,153 +789,6 @@ func (rn *runner) turnParams(r *runState) map[string]any {
 }
 
 // agentMessage is an assistant message item being streamed.
-type agentMessage struct {
-	id, node, message, turnItem string
-	ordinal                     int
-	startedAt                   string
-	createdAt                   string
-	text                        strings.Builder
-	flushed                     int
-}
-
-func msToTime(ms int64) string {
-	if ms <= 0 {
-		return store.Now()
-	}
-	return time.UnixMilli(ms).UTC().Format(store.TimeFormat)
-}
-
-// follow handles codex notifications for the turn until it ends.
-func (rn *runner) follow(ctx context.Context, c *codex.Client, r *runState, notes <-chan codex.Notification) error {
-	sessionCause := "provider-session:" + encodeURIComponent(r.ids.session)
-	items := map[string]*agentMessage{}
-	// Deltas are sent as streaming message updates at most this often; an item
-	// that completes sooner is sent once, complete (as upstream batches them).
-	const flushEvery = 150 * time.Millisecond
-	ticker := time.NewTicker(flushEvery)
-	defer ticker.Stop()
-	messagePayload := func(m *agentMessage, streaming bool) map[string]any {
-		return map[string]any{
-			"createdBy": "agent", "creationSource": "provider", "id": m.message, "threadId": r.ids.thread,
-			"runId": r.ids.run, "nodeId": m.node, "role": "assistant", "text": m.text.String(),
-			"attachments": []any{}, "streaming": streaming, "createdAt": m.createdAt, "updatedAt": store.Now(),
-		}
-	}
-	itemEvent := func(m *agentMessage, typ string, payload any) event {
-		return event{cause: sessionCause, typ: typ, runID: r.ids.run, nodeID: m.node, driver: "codex", payload: payload}
-	}
-	for {
-		select {
-		case <-r.stop:
-			if _, err := c.Call(ctx, "turn/interrupt", map[string]any{"threadId": r.nativeThread, "turnId": r.turnID}); err != nil {
-				return err
-			}
-			r.stop = nil // wait for turn/completed
-		case <-ticker.C:
-			for _, m := range items {
-				if m.text.Len() > m.flushed {
-					m.flushed = m.text.Len()
-					if err := r.append(ctx, itemEvent(m, "message.updated", messagePayload(m, true))); err != nil {
-						return err
-					}
-				}
-			}
-		case n, ok := <-notes:
-			if !ok {
-				return errors.New("codex app-server exited during the turn")
-			}
-			if n.ID != nil {
-				// A request from codex (approvals, user input). Runs use
-				// approval policies that do not ask; anything else is refused.
-				_ = c.Respond(n.ID, nil, &codex.RPCError{Code: -32601, Message: "yatt-server does not handle " + n.Method + " yet"})
-				continue
-			}
-			var p struct {
-				ThreadID string `json:"threadId"`
-				TurnID   string `json:"turnId"`
-				ItemID   string `json:"itemId"`
-				Delta    string `json:"delta"`
-				Turn     struct {
-					ID     string `json:"id"`
-					Status string `json:"status"`
-				} `json:"turn"`
-				Item struct {
-					ID   string `json:"id"`
-					Type string `json:"type"`
-					Text string `json:"text"`
-				} `json:"item"`
-				StartedAtMs   int64 `json:"startedAtMs"`
-				CompletedAtMs int64 `json:"completedAtMs"`
-			}
-			_ = json.Unmarshal(n.Params, &p)
-			if p.ThreadID != "" && p.ThreadID != r.nativeThread {
-				continue
-			}
-			switch n.Method {
-			case "turn/started":
-				r.turnStarted = store.Now()
-				if err := r.append(ctx, event{cause: sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
-					payload: r.providerTurnPayload("running", nil)}); err != nil {
-					return err
-				}
-			case "item/started":
-				if p.Item.Type == "agentMessage" {
-					items[p.Item.ID] = r.newAgentMessage(p.Item.ID, msToTime(p.StartedAtMs))
-				}
-			case "item/agentMessage/delta":
-				m := items[p.ItemID]
-				if m == nil {
-					m = r.newAgentMessage(p.ItemID, store.Now())
-					items[p.ItemID] = m
-				}
-				m.text.WriteString(p.Delta)
-			case "item/completed":
-				if p.Item.Type != "agentMessage" {
-					continue
-				}
-				m := items[p.Item.ID]
-				if m == nil {
-					m = r.newAgentMessage(p.Item.ID, msToTime(p.StartedAtMs))
-				}
-				delete(items, p.Item.ID)
-				m.text.Reset()
-				m.text.WriteString(p.Item.Text)
-				done := msToTime(p.CompletedAtMs)
-				ref := map[string]any{"driver": "codex", "nativeId": m.id, "strength": "strong"}
-				if err := r.append(ctx,
-					itemEvent(m, "node.updated", map[string]any{
-						"id": m.node, "threadId": r.ids.thread, "runId": r.ids.run, "parentNodeId": r.ids.root,
-						"rootNodeId": r.ids.root, "kind": "assistant_message", "status": "completed", "countsForRun": false,
-						"providerThreadId": r.ids.providerThread, "providerTurnId": r.providerTurn, "nativeItemRef": ref,
-						"runtimeRequestId": nil, "checkpointScopeId": nil, "startedAt": m.startedAt, "completedAt": done,
-					}),
-					itemEvent(m, "message.updated", messagePayload(m, false)),
-					itemEvent(m, "turn-item.updated", map[string]any{
-						"id": m.turnItem, "threadId": r.ids.thread, "runId": r.ids.run, "nodeId": m.node,
-						"providerThreadId": r.ids.providerThread, "providerTurnId": r.providerTurn, "nativeItemRef": ref,
-						"parentItemId": nil, "ordinal": m.ordinal, "status": "completed", "title": nil,
-						"startedAt": m.startedAt, "completedAt": done, "updatedAt": done, "type": "assistant_message",
-						"messageId": m.message, "text": p.Item.Text, "streaming": false,
-					}),
-				); err != nil {
-					return err
-				}
-			case "turn/completed":
-				return rn.finish(ctx, r, p.Turn.Status)
-			}
-		}
-	}
-}
-
-func (r *runState) newAgentMessage(itemID, startedAt string) *agentMessage {
-	return &agentMessage{
-		id: itemID, node: "node:provider:codex:native-item:" + itemID,
-		message:  "message:provider:codex:native-item:" + itemID,
-		turnItem: "turn-item:provider:codex:native-item:" + itemID,
-		ordinal:  r.nextItemOrdinal(), startedAt: startedAt, createdAt: startedAt,
-	}
-}
-
 // finish records the end of the turn, the run's checkpoint, and the run's
 // final status.
 func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) error {

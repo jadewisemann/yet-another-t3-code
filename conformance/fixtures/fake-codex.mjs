@@ -118,6 +118,11 @@ function startTurn(id, params) {
     }, 10);
     return;
   }
+  if (text.startsWith("approve") || text.startsWith("ask") || text.startsWith("tools")) {
+    notifyLater(() => notify("turn/started", notificationOf("turn/started", { threadId, turn })), 10);
+    setTimeout(() => scripted(text, threadId, turn, itemId, reply).catch((e) => process.stderr.write(`${e.stack}\n`)), 20);
+    return;
+  }
   // A turn whose text starts with "slow" takes a second, for queueing scenarios.
   const delay = text.startsWith("slow") ? 1000 : 10;
   notifyLater(() => notify("turn/started", notificationOf("turn/started", { threadId, turn })), 10);
@@ -129,6 +134,93 @@ function startTurn(id, params) {
     notify("item/completed", notificationOf("item/completed", { threadId, turnId, item: { ...item, text: reply }, startedAtMs, completedAtMs: Date.now() }));
     notify("turn/completed", notificationOf("turn/completed", { threadId, turn: { ...turn, status: "completed" } }));
   }, delay);
+}
+
+// --- scripted turns ------------------------------------------------------------
+// Server requests wait for the client's response.
+let requestCounter = 0;
+const waiting = new Map();
+function request(method, params) {
+  const id = ++requestCounter;
+  write({ id, method, params: minimal(spec.serverRequests[method]?.params, params) });
+  return new Promise((resolve) => waiting.set(id, resolve));
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function agentReply(threadId, turnId, itemId, reply) {
+  const item = { type: "agentMessage", id: itemId, text: "" };
+  const startedAtMs = Date.now();
+  notify("item/started", notificationOf("item/started", { threadId, turnId, item, startedAtMs }));
+  notify("item/agentMessage/delta", notificationOf("item/agentMessage/delta", { threadId, turnId, itemId, delta: reply }));
+  notify("item/completed", notificationOf("item/completed", { threadId, turnId, item: { ...item, text: reply }, startedAtMs, completedAtMs: Date.now() }));
+}
+
+function commandItem(id, status, extra = {}) {
+  return {
+    type: "commandExecution", id, command: "echo hi", cwd: process.cwd(), status,
+    commandActions: [{ type: "unknown", command: "echo hi" }], aggregatedOutput: null,
+    exitCode: null, durationMs: null, processId: null, source: "agent", ...extra,
+  };
+}
+
+// "approve": a command that needs approval; "ask": a question for the
+// user; "tools": reasoning, a command, and a file change without approval.
+async function scripted(text, threadId, turn, itemId, reply) {
+  const turnId = turn.id;
+  const started = (item, startedAtMs) => notify("item/started", notificationOf("item/started", { threadId, turnId, item, startedAtMs }));
+  const completed = (item, startedAtMs) =>
+    notify("item/completed", notificationOf("item/completed", { threadId, turnId, item, startedAtMs, completedAtMs: Date.now() }));
+  await sleep(10);
+  let answer = "";
+  if (text.startsWith("approve")) {
+    const cmdId = `${itemId}-cmd`;
+    const startedAtMs = Date.now();
+    started(commandItem(cmdId, "inProgress"), startedAtMs);
+    const res = await request("item/commandExecution/requestApproval", {
+      threadId, turnId, itemId: cmdId, startedAtMs, command: "echo hi", cwd: process.cwd(), reason: "fake codex wants to run a command",
+      approvalId: null, commandActions: [{ type: "unknown", command: "echo hi" }],
+    });
+    const decision = res?.result?.decision;
+    answer = ` (decision: ${typeof decision === "string" ? decision : JSON.stringify(decision)})`;
+    if (decision === "accept" || decision === "acceptForSession") {
+      notify("item/commandExecution/outputDelta", notificationOf("item/commandExecution/outputDelta", { threadId, turnId, itemId: cmdId, delta: "hi\n" }));
+      completed(commandItem(cmdId, "completed", { aggregatedOutput: "hi\n", exitCode: 0, durationMs: 5 }), startedAtMs);
+    } else {
+      completed(commandItem(cmdId, "declined"), startedAtMs);
+    }
+  } else if (text.startsWith("ask")) {
+    const res = await request("item/tool/requestUserInput", {
+      threadId, turnId, itemId: `${itemId}-ask`, isBlocking: true,
+      questions: [{ id: "color", header: "Color", question: "Which color?", isOther: false, isSecret: false,
+        options: [{ label: "Red", description: "The red one" }, { label: "Blue", description: "The blue one" }] }],
+    });
+    answer = ` (answers: ${JSON.stringify(res?.result?.answers ?? null)})`;
+  } else {
+    const rId = `${itemId}-reasoning`;
+    let at = Date.now();
+    started({ type: "reasoning", id: rId, summary: [], content: [] }, at);
+    notify("item/reasoning/summaryTextDelta", notificationOf("item/reasoning/summaryTextDelta", { threadId, turnId, itemId: rId, delta: "Thinking about it", summaryIndex: 0 }));
+    completed({ type: "reasoning", id: rId, summary: ["Thinking about it"], content: [] }, at);
+    const cmdId = `${itemId}-cmd`;
+    await sleep(10);
+    at = Date.now();
+    started(commandItem(cmdId, "inProgress"), at);
+    // Upstream batches snapshot writes; a pause keeps the running state its own write.
+    await sleep(150);
+    notify("item/commandExecution/outputDelta", notificationOf("item/commandExecution/outputDelta", { threadId, turnId, itemId: cmdId, delta: "hi\n" }));
+    completed(commandItem(cmdId, "completed", { aggregatedOutput: "hi\n", exitCode: 0, durationMs: 5 }), at);
+    const fcId = `${itemId}-patch`;
+    await sleep(10);
+    at = Date.now();
+    const changes = [{ path: "hello.txt", kind: { type: "add" }, diff: "hello\n" }];
+    started({ type: "fileChange", id: fcId, changes, status: "inProgress" }, at);
+    completed({ type: "fileChange", id: fcId, changes, status: "completed" }, at);
+  }
+  // Items that start in the same millisecond would sort by id.
+  await sleep(10);
+  agentReply(threadId, turnId, itemId, reply + answer);
+  notify("turn/completed", notificationOf("turn/completed", { threadId, turn: { ...turn, status: "completed" } }));
 }
 
 function handle(message) {
@@ -189,6 +281,11 @@ process.stdin.on("data", (chunk) => {
     const message = JSON.parse(line);
     log("in", message);
     if ("method" in message) handle(message);
+    else if (waiting.has(message.id)) {
+      const resolve = waiting.get(message.id);
+      waiting.delete(message.id);
+      resolve(message);
+    }
   }
 });
 process.stdin.on("end", () => process.exit(0));

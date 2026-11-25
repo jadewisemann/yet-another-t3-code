@@ -37,7 +37,7 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 | `file` | 데이터 폴더 아래 파일을 읽습니다. | 파일 내용(`record`에 따라) |
 | `connect` | `bearer` 토큰으로 `/ws`를 하나 더 열어 봅니다. | 성공하면 101, 아니면 거절된 상태 코드 |
 
-`call`, `http`, `cli`는 `capture`로 JSON 결과의 문자열 필드를 변수로 저장할 수 있고, 이후 단계에서 `${var:이름}`으로 씁니다. `await`의 `record: "match"`는 일치한 값 하나만 기록하고, `ignore`에 적은 필드는 `<ignored>`로 기록합니다. 업스트림 자체가 실행마다 다르게 보내는 값에만 씁니다.
+`call`, `http`, `cli`는 `capture`로 JSON 결과의 문자열 필드를 변수로 저장할 수 있고, 이후 단계에서 `${var:이름}`으로 씁니다. `await`도 `capture`로 일치한 값의 필드(`event.payload.id`처럼 점으로 이은 경로)를 저장할 수 있습니다. `await`의 `record: "match"`는 일치한 값 하나만 기록하고, `ignore`에 적은 필드는 `<ignored>`로 기록합니다. 업스트림 자체가 실행마다 다르게 보내는 값에만 씁니다.
 
 자리 표시자: `${workspace}`(작업 폴더), `${base}`(데이터 폴더), `${uuid:이름}`(이름별로 고정되는 새 UUID), `${id:이름}`, `${now}`, `${origin}`, `${port}`, `${var:이름}`. 기록할 때는 이 값들이 다시 `<workspace>`, `<uuid:이름>` 같은 표시로 바뀌고, 그 밖의 UUID는 처음 나온 순서대로 `<uuid#1>`, 시각은 `<time>`이 됩니다.
 
@@ -45,7 +45,7 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 
 ## 프로바이더 픽스처
 
-러너는 `conformance/fixtures/bin`을 `PATH` 맨 앞에 넣고 서버를 띄웁니다. 그래서 서버가 찾는 `codex`는 실제 CLI가 아니라 `fixtures/fake-codex.mjs`(Node)입니다. 이 가짜 codex는 `codex app-server`의 JSON-RPC를 말하고, 응답과 알림은 `spec/generated/codex.json`을 만족하는 최소값에 필요한 필드만 덮어써서 만듭니다. `turn/start`를 받으면 `fake codex reply to: <입력>`이라는 답을 한 번에 보내고 턴을 끝냅니다. 입력이 `wait`로 시작하면 턴을 시작만 하고, `turn/interrupt`를 받을 때 `interrupted`로 끝냅니다(중지 시나리오용). 입력이 `slow`로 시작하면 1초 뒤에 턴을 끝냅니다(대기열 시나리오용). 실행마다 같은 결과가 나오므로 업스트림에서 기록한 골든을 그대로 비교할 수 있습니다.
+러너는 `conformance/fixtures/bin`을 `PATH` 맨 앞에 넣고 서버를 띄웁니다. 그래서 서버가 찾는 `codex`는 실제 CLI가 아니라 `fixtures/fake-codex.mjs`(Node)입니다. 이 가짜 codex는 `codex app-server`의 JSON-RPC를 말하고, 응답과 알림은 `spec/generated/codex.json`을 만족하는 최소값에 필요한 필드만 덮어써서 만듭니다. `turn/start`를 받으면 `fake codex reply to: <입력>`이라는 답을 한 번에 보내고 턴을 끝냅니다. 입력이 `wait`로 시작하면 턴을 시작만 하고, `turn/interrupt`를 받을 때 `interrupted`로 끝냅니다(중지 시나리오용). 입력이 `slow`로 시작하면 1초 뒤에 턴을 끝냅니다(대기열 시나리오용). `approve`로 시작하면 명령 실행 승인을, `ask`로 시작하면 질문을 보내고 답을 기다리며, `tools`로 시작하면 추론, 명령 실행, 파일 변경 항목을 차례로 보냅니다. 업스트림은 같은 항목의 갱신이 짧은 간격으로 오면 한 번으로 합쳐 기록하므로, 이 모드들은 갱신 사이에 시간 간격을 둡니다. 실행마다 같은 결과가 나오므로 업스트림에서 기록한 골든을 그대로 비교할 수 있습니다.
 
 - 실행 폴더의 `fake-codex.log`에 주고받은 메시지가 모두 남습니다(`-keep`으로 폴더를 남겨 확인합니다).
 - `T3CONFORM_TRACE=<파일>`을 지정하면 러너가 받은 스트림 값을 모두 그 파일에 적습니다. 새 시나리오를 작성할 때 씁니다.

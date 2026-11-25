@@ -123,3 +123,17 @@ func TestCheckpointRef(t *testing.T) {
 		t.Fatalf("got %s, want %s", got, want)
 	}
 }
+
+func TestWireTurnItem(t *testing.T) {
+	got := string(wireTurnItem(json.RawMessage(`{"type":"command_execution","output":"hi\n","exitCode":1}`)))
+	if got != `{"exitCode":1,"outputIndicatesFailure":true,"outputOmitted":true,"type":"command_execution"}` {
+		t.Errorf("command: %s", got)
+	}
+	got = string(wireTurnItem(json.RawMessage(`{"type":"file_change","diffStr":"+a","status":"completed"}`)))
+	if got != `{"status":"completed","type":"file_change"}` {
+		t.Errorf("file change: %s", got)
+	}
+	if !outputIndicatesFailure("bash: foo: command not found") || outputIndicatesFailure("all good") {
+		t.Error("outputIndicatesFailure")
+	}
+}

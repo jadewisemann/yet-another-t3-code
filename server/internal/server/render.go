@@ -132,6 +132,14 @@ func summarizeRuns(t *store.Thread, m map[string]any) {
 	if p == nil {
 		return
 	}
+	for _, req := range p.List("runtimeRequests") {
+		if req.String("status") == "pending" {
+			m["pendingRuntimeRequest"] = map[string]any{
+				"id": req.ID, "kind": req.Field("kind"), "createdAt": req.Field("createdAt"), "blocking": true,
+			}
+			break
+		}
+	}
 	items := len(p.List("turnItems"))
 	m["itemCount"], m["visibleItemCount"] = items, items
 	history := []any{}
@@ -197,14 +205,18 @@ func renderThreadProjection(t *store.Thread) map[string]any {
 	for _, name := range store.Collections {
 		list := []any{}
 		for _, e := range t.Proj.List(name) {
-			list = append(list, e.Payload)
+			if name == "turnItems" {
+				list = append(list, wireTurnItem(e.Payload))
+			} else {
+				list = append(list, e.Payload)
+			}
 		}
 		out[name] = list
 	}
 	visible := []any{}
 	for i, e := range t.Proj.List("turnItems") {
 		visible = append(visible, map[string]any{
-			"item": e.Payload, "position": i, "sourceItemId": e.ID,
+			"item": wireTurnItem(e.Payload), "position": i, "sourceItemId": e.ID,
 			"sourceThreadId": t.ID, "visibility": "local",
 		})
 	}
@@ -237,6 +249,9 @@ func renderThreadEvent(st *store.State, e store.Event) any {
 		var env store.Envelope
 		if json.Unmarshal(e.Data, &env) != nil {
 			return nil
+		}
+		if env.Type == "turn-item.updated" {
+			env.Payload = wireTurnItem(env.Payload)
 		}
 		return threadWire{env.ThreadID, env}
 	}

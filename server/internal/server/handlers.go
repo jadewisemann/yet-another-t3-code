@@ -137,6 +137,8 @@ func (s *Server) dispatchCommand(ctx context.Context, payload json.RawMessage) (
 		return s.dispatchMessage(ctx, payload)
 	case "thread.stop":
 		return s.stopThread(ctx, cmd)
+	case "runtime-request.respond":
+		return s.respondRuntimeRequest(ctx, payload)
 	}
 	now := store.Now()
 	needThread := func(st *store.State) (*store.Thread, error) {

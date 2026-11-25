@@ -1,0 +1,227 @@
+{
+  "description": "Agent items other than messages, as codex streams them: when the text starts with \"tools\", the fake codex sends a reasoning summary, runs a command with output, and adds a file. They become reasoning, command_execution and file_change turn items; the wire form leaves out command output and diffs.",
+  "tier": "p2",
+  "steps": [
+    {
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {},
+      "aside": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": "$present"
+        }
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create",
+        "createdBy": "user",
+        "creationSource": "web",
+        "commandId": "${uuid:cmd-create}",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "First thread",
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "branch": null,
+        "worktreePath": null
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "send",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-send}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:cmd-send}",
+        "text": "tools please",
+        "attachments": [],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "reasoning"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "command_execution",
+            "status": "running"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "command_execution",
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "file_change"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    },
+    {
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "after",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "interrupt",
+      "stream": "after"
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "threads"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    }
+  ]
+}
