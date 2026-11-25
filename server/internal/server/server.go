@@ -47,6 +47,7 @@ type Server struct {
 	handlers map[string]Handler
 	log      *slog.Logger
 	store    *store.Store
+	runs     *runner
 }
 
 // Handler answers one RPC method. Unary handlers return a value or an error;
@@ -90,6 +91,8 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{cfg: cfg, sessions: NewSessions(ud), envID: envID, log: slog.Default(), store: st}
+	s.runs = newRunner(s)
+	st.Render = renderThreadEvent
 	s.handlers = s.registerHandlers()
 	return s, nil
 }

@@ -108,3 +108,18 @@ func TestStreamChunksAckAndInterrupt(t *testing.T) {
 		t.Fatalf("expected an interrupt exit, got %+v", f)
 	}
 }
+
+func TestEncodeURIComponent(t *testing.T) {
+	got := encodeURIComponent("pending:run:thread:a b/c~d")
+	if want := "pending%3Arun%3Athread%3Aa%20b%2Fc~d"; got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}
+
+func TestCheckpointRef(t *testing.T) {
+	// Recorded from upstream v0.1.11 (spec/behavior/runs.md).
+	got := checkpointRef("checkpoint-scope:thread:9c2e8d21-6df0-48d2-8594-cdc6889279e8:name:root", 1)
+	if want := "refs/t3/orchestration-v2/checkpoints/ZWNiMTc3YThkNzNiZWZmZGMxZTYzM2Q5ZDAxMjQ4N2Q/ordinal/1"; got != want {
+		t.Fatalf("got %s, want %s", got, want)
+	}
+}

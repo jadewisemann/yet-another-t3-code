@@ -96,6 +96,7 @@ const notify = (method, params) => write({ method, params });
 let threadCounter = 0;
 let turnCounter = 0;
 const threads = new Map();
+const pending = new Map(); // turns waiting for turn/interrupt
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 const thread = (id, cwd) => ({ id, cwd: cwd ?? process.cwd(), preview: "", createdAt: nowSec(), updatedAt: nowSec() });
@@ -108,6 +109,14 @@ function startTurn(id, params) {
   const turn = { id: turnId, items: [], status: "inProgress" };
   respond(id, resultOf("turn/start", { turn }));
   const itemId = `fake-item-${turnCounter}`;
+  if (text.startsWith("wait")) {
+    // Runs until interrupted (turn/interrupt), for stop scenarios.
+    setTimeout(() => {
+      notify("turn/started", notificationOf("turn/started", { threadId, turn }));
+      pending.set(turnId, { threadId, turn });
+    }, 10);
+    return;
+  }
   setTimeout(() => {
     notify("turn/started", notificationOf("turn/started", { threadId, turn }));
     const item = { type: "agentMessage", id: itemId, text: "" };
@@ -150,6 +159,15 @@ function handle(message) {
     }
     case "turn/start":
       return startTurn(id, params);
+    case "turn/interrupt": {
+      respond(id, resultOf("turn/interrupt", {}));
+      const p = pending.get(params.turnId);
+      if (p) {
+        pending.delete(params.turnId);
+        notify("turn/completed", notificationOf("turn/completed", { threadId: p.threadId, turn: { ...p.turn, status: "interrupted" } }));
+      }
+      return;
+    }
     default:
       if (id === undefined) return;
       if (spec.clientRequests[method]) return respond(id, resultOf(method, {}));

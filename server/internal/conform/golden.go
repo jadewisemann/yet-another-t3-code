@@ -51,19 +51,37 @@ func Diff(want, got []Entry) string {
 			}
 		}
 	}
+	// Each change is shown with the golden line number and the closest
+	// earlier "type"/"kind"/"step" line, which says where in the transcript
+	// it is.
 	var out strings.Builder
 	shown := 0
 	i, j := 0, 0
+	lastWhere := -1
+	where := func(i int) {
+		for k := i; k >= 0 && k < n; k-- {
+			t := strings.TrimSpace(a[k])
+			if strings.HasPrefix(t, `"type":`) || strings.HasPrefix(t, `"kind":`) || strings.HasPrefix(t, `"step":`) {
+				if k != lastWhere {
+					lastWhere = k
+					fmt.Fprintf(&out, "@ line %d, under %s\n", i+1, t)
+				}
+				return
+			}
+		}
+	}
 	for (i < n || j < m) && shown < 60 {
 		switch {
 		case i < n && j < m && a[i] == b[j]:
 			i++
 			j++
 		case j < m && (i == n || lcs[i][j+1] >= lcs[i+1][j]):
+			where(i)
 			fmt.Fprintf(&out, "+ %s\n", b[j])
 			j++
 			shown++
 		default:
+			where(i)
 			fmt.Fprintf(&out, "- %s\n", a[i])
 			i++
 			shown++

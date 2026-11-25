@@ -18,7 +18,13 @@
       "op": "subscribe",
       "as": "shell",
       "method": "orchestration.subscribeShell",
-      "payload": {}
+      "payload": {},
+      "aside": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": "$present"
+        }
+      ]
     },
     {
       "op": "await",
@@ -177,6 +183,19 @@
     {
       "op": "interrupt",
       "stream": "after"
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "threads"
+      ]
     },
     {
       "op": "interrupt",

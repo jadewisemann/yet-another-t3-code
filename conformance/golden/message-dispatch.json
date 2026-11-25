@@ -87,37 +87,6 @@
       "as": "shell",
       "values": [
         {
-          "kind": "snapshot",
-          "resolvedRepositoryIdentityRoots": [
-            "<workspace>"
-          ],
-          "snapshot": {
-            "archivedThreads": [],
-            "projects": [
-              {
-                "archivedAt": null,
-                "autoPull": false,
-                "createdAt": "<time>",
-                "defaultModelSelection": null,
-                "defaultThreadEnvMode": null,
-                "faviconPath": null,
-                "hasCustomTitle": false,
-                "id": "<uuid:project>",
-                "pinnedAt": null,
-                "projectIcon": null,
-                "repositoryIdentity": null,
-                "scripts": [],
-                "title": "workspace",
-                "updatedAt": "<time>",
-                "workspaceRoot": "<workspace>"
-              }
-            ],
-            "schemaVersion": 2,
-            "snapshotSequence": 2,
-            "threads": []
-          }
-        },
-        {
           "kind": "thread.updated",
           "location": "active",
           "sequence": 2,
@@ -1020,6 +989,44 @@
     },
     {
       "step": 16,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": [
+            "<workspace>"
+          ],
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": "<ignored>",
+            "threads": "<ignored>"
+          }
+        }
+      ]
+    },
+    {
+      "step": 17,
       "op": "interrupt",
       "as": "shell",
       "exit": {

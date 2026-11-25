@@ -9,4 +9,4 @@
 - SHELL-5. 스레드가 생기거나 제목 등이 바뀌면 `{"kind":"thread.updated","location":"active","sequence":N,"thread":{...}}`를 보냅니다. (`thread-lifecycle`)
 - SHELL-6. 스레드를 보관하면 `{"kind":"thread.removed","location":"active","threadId":...}`를 보냅니다. 보관 목록에 추가되었다는 별도 값은 이 스트림에 오지 않습니다. (`thread-lifecycle`)
 - SHELL-7. `thread.visit`는 셸 스트림에 아무 값도 보내지 않습니다. (`thread-lifecycle`)
-- SHELL-8. 첫 스레드가 생긴 직후 서버는 `resolvedRepositoryIdentityRoots`가 붙은 스냅샷을 한 번 더 보냅니다. 클라이언트는 이미 받은 스냅샷을 이것으로 교체해야 합니다. 이 스냅샷의 `snapshotSequence`와 포함되는 스레드는 업스트림에서도 타이밍에 따라 달라집니다. (`thread-lifecycle`, `launch-thread`)
+- SHELL-8. 첫 스레드가 생긴 직후 서버는 `resolvedRepositoryIdentityRoots`가 붙은 스냅샷을 한 번 더 보냅니다. 클라이언트는 이미 받은 스냅샷을 이것으로 교체해야 합니다. 이 스냅샷의 `snapshotSequence`와 포함되는 스레드는 업스트림에서도 타이밍에 따라 달라집니다. 스냅샷이 오는 위치도 첫 `thread.updated`의 앞이나 뒤로 달라지므로, 시나리오는 이 스냅샷을 따로 떼어 확인합니다(`aside`). (`thread-lifecycle`, `launch-thread`)
