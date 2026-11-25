@@ -73,6 +73,24 @@ func providerInstanceID(t *store.Thread) any {
 }
 
 func threadCommon(t *store.Thread) map[string]any {
+	m := threadRecord(t)
+	if t.TitleRegenerationSeen {
+		m["titleRegeneration"] = titleRegeneration(t)
+	}
+	if t.TitleRenamed != nil {
+		m["titleRenamed"] = *t.TitleRenamed
+	}
+	return m
+}
+
+func titleRegeneration(t *store.Thread) any {
+	if t.TitleRegeneration == nil {
+		return nil
+	}
+	return map[string]any{"requestId": t.TitleRegeneration.RequestID, "startedAt": t.TitleRegeneration.StartedAt}
+}
+
+func threadRecord(t *store.Thread) map[string]any {
 	return map[string]any{
 		"id":                     t.ID,
 		"projectId":              t.ProjectID,
@@ -121,6 +139,8 @@ func renderShellThread(t *store.Thread) map[string]any {
 	} {
 		m[k] = v
 	}
+	delete(m, "titleRenamed")
+	m["titleRegeneration"] = titleRegeneration(t)
 	summarizeRuns(t, m)
 	return m
 }

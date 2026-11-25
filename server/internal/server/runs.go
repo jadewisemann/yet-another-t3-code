@@ -144,6 +144,9 @@ type runState struct {
 	mu            sync.Mutex // guards itemOrdinal and providerTurn, which stop requests read
 	stopRequest   string     // the interrupt-request turn item, once stopped
 	answers       chan requestAnswer
+	workspacePrep json.RawMessage // the launch's workspace strategy, for a deferred run
+	preparing     bool            // the run waits for its workspace and has no checkpoint scope yet
+	prepOrdinal   int             // the workspace preparation item's ordinal
 }
 
 type checkpointInfo struct {
@@ -158,7 +161,7 @@ func (r *runState) runPayload(status string, completedAt any, checkpointID any) 
 	if r.startedAt != "" {
 		started = r.startedAt
 	}
-	return map[string]any{
+	m := map[string]any{
 		"id": r.ids.run, "threadId": r.ids.thread, "ordinal": r.ids.ordinal,
 		"providerInstanceId": r.instance, "modelSelection": r.modelSel,
 		"providerThreadId": r.ids.providerThread, "userMessageId": r.userMessageID,
@@ -166,6 +169,10 @@ func (r *runState) runPayload(status string, completedAt any, checkpointID any) 
 		"queuePosition": nilIfZero(r.queuePosition), "requestedAt": r.requestedAt, "startedAt": started,
 		"completedAt": completedAt, "checkpointId": checkpointID, "contextHandoffId": nil,
 	}
+	if r.workspacePrep != nil {
+		m["workspacePreparation"] = r.workspacePrep
+	}
+	return m
 }
 
 func (r *runState) attemptPayload(status string, completedAt any) map[string]any {
@@ -182,11 +189,15 @@ func (r *runState) attemptPayload(status string, completedAt any) map[string]any
 }
 
 func (r *runState) rootNode(status string, completedAt any) map[string]any {
+	scope := any(r.ids.scope)
+	if r.preparing {
+		scope = nil
+	}
 	return map[string]any{
 		"id": r.ids.root, "threadId": r.ids.thread, "runId": r.ids.run, "parentNodeId": nil,
 		"rootNodeId": r.ids.root, "kind": "root_turn", "status": status, "countsForRun": true,
 		"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
-		"runtimeRequestId": nil, "checkpointScopeId": r.ids.scope,
+		"runtimeRequestId": nil, "checkpointScopeId": scope,
 		"startedAt": nilIfEmpty(r.startedAt), "completedAt": completedAt,
 	}
 }
@@ -258,7 +269,17 @@ type messageCommand struct {
 	CreationSource string          `json:"creationSource"`
 	DispatchMode   *struct {
 		Type string `json:"type"`
+		// WorkspaceStrategy comes with defer_start, which launchThread
+		// uses: the run waits in "preparing" until its workspace is ready.
+		WorkspaceStrategy json.RawMessage `json:"workspaceStrategy"`
 	} `json:"dispatchMode"`
+	// ReleaseCommandID names the command that releases a deferred run.
+	ReleaseCommandID string `json:"releaseCommandId"`
+	// TitleSeed asks for a generated title (launchThread generateTitle).
+	TitleSeed *string `json:"titleSeed"`
+	// TitleRequestID names the title request; it defaults to the command
+	// id. launchThread names it after its own command.
+	TitleRequestID string `json:"titleRequestId"`
 }
 
 func latestRun(t *store.Thread) *store.Entity {
@@ -332,12 +353,24 @@ func (r *runState) userTurnItem(createdBy, source, intent string, attachments js
 }
 
 func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (any, error) {
+	res, after, err := s.dispatchMessageDeferred(ctx, payload)
+	if after != nil {
+		after()
+	}
+	return res, err
+}
+
+// dispatchMessageDeferred accepts a message and returns what starts its
+// run, so that launchThread can answer with the thread as it stood before
+// the run's workspace was released.
+func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMessage) (any, func(), error) {
 	var cmd messageCommand
 	if err := json.Unmarshal(payload, &cmd); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tc := threadCommand{Type: "message.dispatch", CommandID: cmd.CommandID, ThreadID: cmd.ThreadID}
 	var r *runState
+	titleRequest := ""
 	events, err := s.store.DecideMany(ctx, cmd.CommandID, func(st *store.State) ([]store.Draft, error) {
 		t, ok := st.Threads[cmd.ThreadID]
 		if !ok {
@@ -376,6 +409,13 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 			attachments = json.RawMessage("[]")
 		}
 		cause := "command:" + cmd.CommandID
+		if !queued && cmd.DispatchMode != nil && cmd.DispatchMode.Type == "defer_start" {
+			r.preparing = true
+			r.workspacePrep = cmd.DispatchMode.WorkspaceStrategy
+			if len(r.workspacePrep) == 0 {
+				r.workspacePrep = json.RawMessage(`{"type":"root"}`)
+			}
+		}
 		var evs []event
 		if queued {
 			r.queuePosition = queuePosition + 1
@@ -389,16 +429,18 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 		status := "starting"
 		if queued {
 			status = "queued"
+		} else if r.preparing {
+			status = "preparing"
 		}
 		evs = append(evs,
 			event{cause: cause, typ: "run.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload(status, nil, nil)},
 			event{cause: cause, typ: "run-attempt.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload("pending", nil)},
 			event{cause: cause, typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("pending", nil)},
-			event{cause: cause, typ: "checkpoint-scope.created", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
-				"id": r.ids.scope, "threadId": t.ID, "runId": r.ids.run, "nodeId": r.ids.root, "parentScopeId": nil,
-				"providerThreadId": r.ids.providerThread, "kind": "root_run", "ordinalWithinParent": 0,
-				"advancesAppRunCount": true, "cwd": r.cwd, "createdAt": now,
-			}},
+		)
+		if !r.preparing {
+			evs = append(evs, event{cause: cause, typ: "checkpoint-scope.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.checkpointScope(now)})
+		}
+		evs = append(evs,
 			event{cause: cause, typ: "message.updated", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
 				"createdBy": createdBy, "creationSource": source, "id": cmd.MessageID, "threadId": t.ID,
 				"runId": r.ids.run, "nodeId": r.ids.root, "role": "user", "text": cmd.Text,
@@ -409,6 +451,10 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 			evs = append(evs, event{cause: cause, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root,
 				payload: r.userTurnItem(createdBy, source, "turn_start", attachments, now)})
 		}
+		if r.preparing {
+			evs = append(evs, event{cause: cause, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root,
+				payload: r.preparationItem("running", now)})
+		}
 		drafts, err := r.drafts(evs...)
 		if err != nil {
 			return nil, err
@@ -416,21 +462,49 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 		if queued {
 			r = nil
 		}
-		// The thread's first message marks it visited.
+		// The thread's first message marks it visited, and a seeded first
+		// message starts a title request (spec/behavior/titles.md).
+		var meta []store.Draft
 		if !queued && t.LastVisitedAt == nil {
 			visited := now
-			threadDraft := store.Draft{Type: store.ThreadMetadataUpdated, Data: store.ThreadMetadata{ThreadID: t.ID, LastVisitedAt: &visited, At: now}}
-			drafts = append([]store.Draft{threadDraft}, drafts...)
+			meta = append(meta, store.Draft{Type: store.ThreadMetadataUpdated, Data: store.ThreadMetadata{ThreadID: t.ID, LastVisitedAt: &visited, At: now}})
 		}
+		if cmd.TitleSeed != nil && len(t.Proj.List("messages")) == 0 && !titleSetBeforeFirstMessage(t, *cmd.TitleSeed) {
+			titleRequest = cmd.TitleRequestID
+			if titleRequest == "" {
+				titleRequest = cmd.CommandID
+			}
+			meta = append(meta, store.Draft{Type: store.ThreadMetadataUpdated, Data: store.ThreadMetadata{
+				ThreadID: t.ID, Title: cmd.TitleSeed, At: now,
+				TitleRegeneration: &store.TitleRegeneration{RequestID: titleRequest, StartedAt: now},
+			}})
+		}
+		drafts = append(meta, drafts...)
 		return drafts, nil
 	})
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
-		return nil, err
+		return nil, nil, err
 	}
+	if err == nil && titleRequest != "" {
+		go s.generateTitle(cmd.ThreadID, titleRequest, cmd.MessageID)
+	}
+	var after func()
 	if err == nil && r != nil {
-		s.runs.start(r)
+		after = func() {
+			if r.preparing {
+				release := cmd.ReleaseCommandID
+				if release == "" {
+					release = cmd.CommandID + ":release"
+				}
+				if err := s.runs.release(context.Background(), r, release); err != nil {
+					s.log.Warn("run release failed", slog.String("run", r.ids.run), slog.String("error", err.Error()))
+					return
+				}
+			}
+			s.runs.start(r)
+		}
 	}
-	return map[string]any{"sequence": events[len(events)-1].Sequence}, nil
+	return map[string]any{"sequence": events[len(events)-1].Sequence}, after, nil
 }
 
 // promoteQueued starts the thread's next queued run, if it has one, once
@@ -893,4 +967,48 @@ func (rn *runner) fail(r *runState, cause error) {
 		event{typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("failed", done)},
 	)
 	_ = cause
+}
+
+func (r *runState) checkpointScope(at string) map[string]any {
+	return map[string]any{
+		"id": r.ids.scope, "threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root, "parentScopeId": nil,
+		"providerThreadId": r.ids.providerThread, "kind": "root_run", "ordinalWithinParent": 0,
+		"advancesAppRunCount": true, "cwd": r.cwd, "createdAt": at,
+	}
+}
+
+const workspacePreparationInput = "Preparing workspace"
+
+// preparationItem is the command_execution item that shows a deferred
+// run's workspace preparation (spec/behavior/runs.md RUN-20).
+func (r *runState) preparationItem(status, at string) map[string]any {
+	m := map[string]any{
+		"id":       "turn-item:provider:codex:native-item:" + encodeURIComponent("workspace-preparation:"+r.ids.run),
+		"threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
+		"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
+		"parentItemId": nil, "status": status, "title": workspacePreparationInput,
+		"startedAt": r.requestedAt, "completedAt": nil, "updatedAt": at,
+		"type": "command_execution", "input": workspacePreparationInput,
+	}
+	if status == "running" {
+		r.prepOrdinal = r.nextItemOrdinal()
+	} else {
+		m["title"], m["output"], m["exitCode"], m["completedAt"] = "Workspace ready", "Workspace preparation completed.", 0, at
+	}
+	m["ordinal"] = r.prepOrdinal
+	return m
+}
+
+// release ends a deferred run's workspace preparation. With the root
+// workspace there is nothing to prepare, so it follows the launch at once.
+func (rn *runner) release(ctx context.Context, r *runState, commandID string) error {
+	now := store.Now()
+	r.preparing = false
+	cause := "command:" + commandID
+	return r.append(ctx,
+		event{cause: cause, typ: "checkpoint-scope.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.checkpointScope(now)},
+		event{cause: cause, typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("pending", nil)},
+		event{cause: cause, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.preparationItem("completed", now)},
+		event{cause: cause, typ: "run.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload("starting", nil, nil)},
+	)
 }

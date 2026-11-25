@@ -44,8 +44,15 @@ type Thread struct {
 	LastVisitedAt   *string         `json:"lastVisitedAt,omitempty"`
 
 	// Not part of the thread.created data: derived from later events.
-	ActiveProviderThreadID *string     `json:"-"`
-	Proj                   *Projection `json:"-"`
+	ActiveProviderThreadID *string `json:"-"`
+	// TitleRenamed is set once a title is chosen: true for a user rename,
+	// false for a generated title. TitleRegeneration is the title request
+	// in progress; TitleRegenerationSeen tells whether the thread record
+	// carries the key at all (upstream adds it with the first request).
+	TitleRenamed          *bool              `json:"-"`
+	TitleRegeneration     *TitleRegeneration `json:"-"`
+	TitleRegenerationSeen bool               `json:"-"`
+	Proj                  *Projection        `json:"-"`
 }
 
 type ThreadMetadata struct {
@@ -55,7 +62,16 @@ type ThreadMetadata struct {
 	WorktreePath *string `json:"worktreePath,omitempty"`
 	// Sending a message also marks the thread visited.
 	LastVisitedAt *string `json:"lastVisitedAt,omitempty"`
-	At            string  `json:"at"`
+	TitleRenamed  *bool   `json:"titleRenamed,omitempty"`
+	// TitleRegeneration starts a title request; TitleRegenerationDone ends it.
+	TitleRegeneration     *TitleRegeneration `json:"titleRegeneration,omitempty"`
+	TitleRegenerationDone bool               `json:"titleRegenerationDone,omitempty"`
+	At                    string             `json:"at"`
+}
+
+type TitleRegeneration struct {
+	RequestID string `json:"requestId"`
+	StartedAt string `json:"startedAt"`
 }
 
 type ThreadRef struct {
@@ -149,6 +165,16 @@ func (s *State) apply(e Event) error {
 		}
 		if m.LastVisitedAt != nil {
 			t.LastVisitedAt = m.LastVisitedAt
+		}
+		if m.TitleRenamed != nil {
+			t.TitleRenamed = m.TitleRenamed
+		}
+		if m.TitleRegeneration != nil {
+			t.TitleRegeneration = m.TitleRegeneration
+			t.TitleRegenerationSeen = true
+		}
+		if m.TitleRegenerationDone {
+			t.TitleRegeneration = nil
 		}
 		t.UpdatedAt = m.At
 	case ThreadVisited, ThreadArchived, ThreadUnarchived:
