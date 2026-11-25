@@ -17,3 +17,4 @@
 | `runs.md` | P2 |
 | `titles.md` | P2 |
 | `diffs.md` | P3 |
+| `worktrees.md` | P3 |

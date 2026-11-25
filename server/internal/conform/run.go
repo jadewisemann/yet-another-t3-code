@@ -305,6 +305,33 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 			record(func(n *Normalizer) Entry {
 				return Entry{Step: step, Op: "cli", As: strings.Join(st.Args, " "), Status: code, Body: shape(n, out, st.Record)}
 			})
+		case "git":
+			// Prepares the workspace repository, for example with a first
+			// commit. Only the exit code is recorded.
+			args := []string{}
+			for _, a := range st.Args {
+				x, err := vars.Expand(json.RawMessage(a))
+				if err != nil {
+					return fail(err)
+				}
+				args = append(args, string(x))
+			}
+			cmd := exec.CommandContext(stepCtx, "git", args...)
+			cmd.Dir = t.Workspace
+			cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t3conform", "GIT_AUTHOR_EMAIL=t3conform@example.invalid",
+				"GIT_COMMITTER_NAME=t3conform", "GIT_COMMITTER_EMAIL=t3conform@example.invalid",
+				"GIT_AUTHOR_DATE=2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z")
+			err := cmd.Run()
+			code := 0
+			if ee, ok := err.(*exec.ExitError); ok {
+				code = ee.ExitCode()
+			} else if err != nil {
+				return fail(err)
+			}
+			st := st
+			record(func(n *Normalizer) Entry {
+				return Entry{Step: step, Op: "git", As: strings.Join(st.Args, " "), Status: code}
+			})
 		case "connect":
 			// Opens a second socket with another token and reports whether
 			// the upgrade succeeded (101) or the status it was refused with.

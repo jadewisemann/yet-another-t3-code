@@ -31,6 +31,8 @@ actions!(
         RenameThread,
         /// Switch the model a new thread starts on.
         CycleModel,
+        /// Switch a new thread between the project folder and a new git worktree.
+        ToggleWorktree,
         /// Open the next thread in the sidebar.
         NextThread,
         /// Open the previous thread in the sidebar.
@@ -67,6 +69,10 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
         ("Add project", Box::new(AddProject)),
         ("Rename thread", Box::new(RenameThread)),
         ("Switch model for new threads", Box::new(CycleModel)),
+        (
+            "New thread in a worktree / the project folder",
+            Box::new(ToggleWorktree),
+        ),
         ("Next thread", Box::new(NextThread)),
         ("Previous thread", Box::new(PreviousThread)),
         ("Focus message box", Box::new(FocusComposer)),
@@ -112,6 +118,7 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-n", NewThread, Some("Workspace")),
         KeyBinding::new("secondary-shift-o", AddProject, Some("Workspace")),
         KeyBinding::new("secondary-shift-m", CycleModel, Some("Workspace")),
+        KeyBinding::new("secondary-alt-w", ToggleWorktree, Some("Workspace")),
         KeyBinding::new("alt-down", NextThread, Some("Workspace")),
         KeyBinding::new("alt-up", PreviousThread, Some("Workspace")),
         KeyBinding::new("secondary-]", NextThread, Some("Workspace")),

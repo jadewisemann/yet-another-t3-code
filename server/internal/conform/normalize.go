@@ -13,7 +13,10 @@ var (
 	// Checkpoint refs embed base64url(hex(sha256(scopeId))[:32]); the scope id
 	// contains the thread id, which is fresh per run.
 	checkpointRefRe = regexp.MustCompile(`(refs/t3/orchestration-v2/checkpoints/)[A-Za-z0-9_-]+(/ordinal/)`)
-	timeRe          = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})`)
+	// Managed worktree folders end in a hash of the repository's git
+	// directory and the branch, and the repository is fresh per run.
+	worktreeDirRe = regexp.MustCompile(`(/worktrees/[^/"]+/[^/"]*-)[0-9a-f]{16}\b`)
+	timeRe        = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})`)
 )
 
 // volatileFields are fields whose value depends on the run, not on the
@@ -96,6 +99,7 @@ func (n *Normalizer) str(s string) string {
 	}
 	s = timeRe.ReplaceAllString(s, "<time>")
 	s = checkpointRefRe.ReplaceAllString(s, "${1}<scope-key>${2}")
+	s = worktreeDirRe.ReplaceAllString(s, "${1}<hash>")
 	s = uuidRe.ReplaceAllStringFunc(s, func(u string) string {
 		u = strings.ToLower(u)
 		if p, ok := n.uuids[u]; ok {

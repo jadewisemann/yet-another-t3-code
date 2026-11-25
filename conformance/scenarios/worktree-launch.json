@@ -1,0 +1,142 @@
+{
+  "description": "A thread launched with the worktree strategy and an explicit branch: the server creates a git worktree for it under the data directory, records the branch and worktree path on the thread, and runs the first turn there.",
+  "tier": "p3",
+  "steps": [
+    {
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "git",
+      "args": [
+        "commit",
+        "--allow-empty",
+        "-q",
+        "-m",
+        "init"
+      ]
+    },
+    {
+      "op": "call",
+      "as": "launch",
+      "method": "orchestration.launchThread",
+      "payload": {
+        "commandId": "${uuid:cmd-launch}",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "Worktree thread",
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "workspaceStrategy": {
+          "type": "worktree",
+          "baseRef": "main",
+          "branch": "feature/x"
+        },
+        "initialMessage": {
+          "text": "hello",
+          "attachments": []
+        }
+      },
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "status": "completed"
+          }
+        }
+      },
+      "ignore": [
+        "sequence"
+      ],
+      "timeoutMs": 20000,
+      "record": "match"
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {}
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    },
+    {
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "after",
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "sequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "after"
+    },
+    {
+      "op": "git",
+      "args": [
+        "rev-parse",
+        "--verify",
+        "-q",
+        "refs/heads/feature/x"
+      ]
+    }
+  ]
+}
