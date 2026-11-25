@@ -1,6 +1,6 @@
 //! The main window: sidebar of projects and threads, the open conversation, and the composer.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla,
@@ -11,7 +11,8 @@ use crate::config::{self, Connection};
 use crate::keymap::*;
 use crate::local;
 use crate::protocol::{
-    self, ConversationMessage, ProjectShell, ShellStreamItem, ThreadShell, ThreadStreamItem,
+    self, ConversationMessage, ProjectShell, RequestItem, ShellStreamItem, ThreadShell,
+    ThreadStreamItem,
 };
 use crate::rpc::{self, RpcEvent, RpcHandle};
 use crate::text_input::{InputEvent, TextInput};
@@ -40,6 +41,10 @@ pub struct Workspace {
     draft_project: Option<String>,
     messages: Vec<ConversationMessage>,
     messages_loaded: bool,
+    /// Approvals and questions in the open thread, by turn item id.
+    requests: Vec<RequestItem>,
+    /// Options picked so far for questions, by request id then question id.
+    picked_answers: HashMap<String, BTreeMap<String, String>>,
     composer: Entity<TextInput>,
     rename_input: Entity<TextInput>,
     renaming: bool,
@@ -105,6 +110,8 @@ impl Workspace {
             draft_project: None,
             messages: Vec::new(),
             messages_loaded: false,
+            requests: Vec::new(),
+            picked_answers: HashMap::new(),
             composer,
             rename_input,
             renaming: false,
@@ -240,6 +247,11 @@ impl Workspace {
     fn on_thread_item(&mut self, item: ThreadStreamItem) {
         match item {
             ThreadStreamItem::Snapshot { projection } => {
+                self.requests = projection
+                    .turn_items
+                    .iter()
+                    .filter_map(protocol::request_from_item)
+                    .collect();
                 self.messages = projection.messages;
                 self.messages
                     .sort_by(|a, b| a.created_at.cmp(&b.created_at));
@@ -247,6 +259,13 @@ impl Workspace {
                 self.scroll_to_end();
             }
             ThreadStreamItem::Event { event } => {
+                if let Some(request) = protocol::request_from_event(&event) {
+                    match self.requests.iter_mut().find(|r| r.id == request.id) {
+                        Some(existing) => *existing = request,
+                        None => self.requests.push(request),
+                    }
+                    self.scroll_to_end();
+                }
                 if let Some(message) = protocol::message_from_event(&event) {
                     match self.messages.iter_mut().find(|m| m.id == message.id) {
                         Some(existing) => *existing = message,
@@ -425,6 +444,76 @@ impl Workspace {
         self.select_thread(None, window, cx);
         self.draft_project = project;
         cx.notify();
+    }
+
+    fn waiting_requests(&self) -> impl Iterator<Item = &RequestItem> {
+        self.requests.iter().filter(|r| r.is_waiting())
+    }
+
+    fn respond_approval(
+        &mut self,
+        request_id: String,
+        decision: &'static str,
+        cx: &mut Context<Self>,
+    ) {
+        let (Some(rpc), Some(thread_id)) = (self.rpc.clone(), self.selected_thread.clone()) else {
+            return;
+        };
+        rpc.dispatch(
+            "Answer",
+            protocol::respond_approval(&thread_id, &request_id, decision),
+        );
+        cx.notify();
+    }
+
+    /// Records an option for one question, and sends the answers once every question has one.
+    fn pick_answer(
+        &mut self,
+        request_id: String,
+        question_id: String,
+        label: String,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(request) = self
+            .requests
+            .iter()
+            .find(|r| r.request_id.as_deref() == Some(request_id.as_str()))
+        else {
+            return;
+        };
+        let total = request.questions.len();
+        let picked = self.picked_answers.entry(request_id.clone()).or_default();
+        picked.insert(question_id, label);
+        if picked.len() >= total {
+            let answers = picked.clone();
+            self.picked_answers.remove(&request_id);
+            if let (Some(rpc), Some(thread_id)) = (self.rpc.clone(), self.selected_thread.clone()) {
+                rpc.dispatch(
+                    "Answer",
+                    protocol::answer_questions(&thread_id, &request_id, &answers),
+                );
+            }
+        }
+        cx.notify();
+    }
+
+    /// Sends the message box text as the answer to the first unanswered question.
+    fn answer_with_text(
+        &mut self,
+        request_id: String,
+        question_id: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let text = self.composer.read(cx).text().trim().to_string();
+        if text.is_empty() {
+            self.notice = Some("Type the answer in the message box first.".into());
+            cx.notify();
+            return;
+        }
+        self.composer.update(cx, |input, cx| input.set_text("", cx));
+        window.focus(&self.composer.focus_handle(cx));
+        self.pick_answer(request_id, question_id, text, cx);
     }
 
     /// Asks for a folder and adds it as a project, then starts a draft thread in it.
@@ -968,7 +1057,7 @@ impl Workspace {
             .child(div().text_color(p.muted).child("/"))
             .child(div().flex_1().overflow_hidden().child(title))
             .when(attention, |el| {
-                el.child(chip("Needs your answer", p.danger, p))
+                el.child(chip("Needs your answer below", p.danger, p))
             })
             .when(working, |el| el.child(chip("Working…", p.working, p)))
             .when(thread.is_some() && !self.renaming, |el| {
@@ -1068,6 +1157,107 @@ impl Workspace {
         column.into_any_element()
     }
 
+    fn render_requests(&self, p: Palette, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let mut cards = div().flex().flex_col().gap_2();
+        let mut any = false;
+        for request in self.waiting_requests() {
+            any = true;
+            let request_id = request.request_id.clone().unwrap_or_default();
+            let mut card = div()
+                .px_4()
+                .py_3()
+                .rounded_xl()
+                .border_1()
+                .border_color(p.danger)
+                .bg(p.surface)
+                .flex()
+                .flex_col()
+                .gap_2();
+            if request.is_question() {
+                let picked = self.picked_answers.get(&request_id);
+                for question in &request.questions {
+                    let chosen = picked.and_then(|m| m.get(&question.id)).cloned();
+                    let mut options = div().flex().flex_wrap().gap_1();
+                    for option in &question.options {
+                        let (rid, qid, label) = (
+                            request_id.clone(),
+                            question.id.clone(),
+                            option.label.clone(),
+                        );
+                        let selected = chosen.as_deref() == Some(option.label.as_str());
+                        options = options.child(
+                            dynamic_button(
+                                format!("answer-{}-{}-{}", request_id, question.id, option.label),
+                                if option.description.is_empty() {
+                                    option.label.clone()
+                                } else {
+                                    format!("{} · {}", option.label, option.description)
+                                },
+                                p,
+                            )
+                            .when(selected, |el| el.bg(p.row_selected))
+                            .on_click(cx.listener(
+                                move |this, _: &ClickEvent, _, cx| {
+                                    this.pick_answer(rid.clone(), qid.clone(), label.clone(), cx)
+                                },
+                            )),
+                        );
+                    }
+                    let (rid, qid) = (request_id.clone(), question.id.clone());
+                    options = options.child(
+                        dynamic_button(
+                            format!("answer-text-{}-{}", request_id, question.id),
+                            "Answer with the message box".into(),
+                            p,
+                        )
+                        .on_click(cx.listener(
+                            move |this, _: &ClickEvent, window, cx| {
+                                this.answer_with_text(rid.clone(), qid.clone(), window, cx)
+                            },
+                        )),
+                    );
+                    card = card
+                        .child(div().font_weight(FontWeight::SEMIBOLD).child(
+                            if question.header.is_empty() {
+                                question.question.clone()
+                            } else {
+                                format!("{}: {}", question.header, question.question)
+                            },
+                        ))
+                        .child(options);
+                }
+            } else {
+                let what = match request.request_kind.as_deref() {
+                    Some("command") => "The agent wants to run a command",
+                    Some("file-change") | Some("file_change") => "The agent wants to change files",
+                    _ => "The agent asks for approval",
+                };
+                let mut buttons = div().flex().gap_1();
+                for (label, decision) in [
+                    ("Approve", "accept"),
+                    ("Approve for this session", "acceptForSession"),
+                    ("Decline", "decline"),
+                ] {
+                    let rid = request_id.clone();
+                    buttons = buttons.child(
+                        dynamic_button(format!("{decision}-{request_id}"), label.into(), p)
+                            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                                this.respond_approval(rid.clone(), decision, cx)
+                            })),
+                    );
+                }
+                card = card
+                    .child(div().font_weight(FontWeight::SEMIBOLD).child(what))
+                    .when_some(request.prompt.clone(), |el, prompt| {
+                        el.child(div().text_color(p.muted).child(prompt))
+                    })
+                    .child(buttons);
+            }
+            cards = cards.child(card);
+        }
+        any.then(|| div().px_8().pt_2().child(cards).into_any_element())
+    }
+
     fn render_composer(&self, p: Palette, window: &Window) -> AnyElement {
         let hint = format!(
             "Enter to send · {} new thread · {} rename · {} shortcuts",
@@ -1165,6 +1355,20 @@ fn chip(label: &'static str, color: Hsla, p: Palette) -> impl IntoElement {
         .child(label)
 }
 
+fn dynamic_button(id: String, label: String, p: Palette) -> gpui::Stateful<gpui::Div> {
+    div()
+        .id(SharedString::from(id))
+        .px_2()
+        .py_1()
+        .rounded_md()
+        .text_sm()
+        .cursor_pointer()
+        .border_1()
+        .border_color(p.border)
+        .hover(move |s| s.bg(p.row_hover))
+        .child(label)
+}
+
 fn button(id: &'static str, label: String, p: Palette) -> gpui::Stateful<gpui::Div> {
     div()
         .id(id)
@@ -1231,6 +1435,7 @@ impl Render for Workspace {
             .flex_col()
             .child(self.render_header(p, window, cx))
             .child(self.render_messages(p, cx))
+            .children(self.render_requests(p, cx))
             .child(self.render_composer(p, window));
 
         root.child(

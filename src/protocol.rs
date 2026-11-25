@@ -163,9 +163,79 @@ pub struct ConversationMessage {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ThreadProjection {
     #[serde(default)]
     pub messages: Vec<ConversationMessage>,
+    #[serde(default)]
+    pub turn_items: Vec<Value>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct QuestionOption {
+    #[serde(default)]
+    pub label: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Question {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub header: String,
+    #[serde(default)]
+    pub question: String,
+    #[serde(default)]
+    pub options: Vec<QuestionOption>,
+}
+
+/// A turn item that waits for the user: an approval (`approval_request`) or questions
+/// (`user_input_request`).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RequestItem {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub item_type: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub request_kind: Option<String>,
+    #[serde(default)]
+    pub prompt: Option<String>,
+    #[serde(default)]
+    pub questions: Vec<Question>,
+}
+
+impl RequestItem {
+    pub fn is_waiting(&self) -> bool {
+        self.status == "waiting" && self.request_id.is_some()
+    }
+
+    pub fn is_question(&self) -> bool {
+        self.item_type == "user_input_request"
+    }
+}
+
+/// Reads a turn item if it is a request for the user.
+pub fn request_from_item(item: &Value) -> Option<RequestItem> {
+    let kind = item.get("type")?.as_str()?;
+    if kind != "approval_request" && kind != "user_input_request" {
+        return None;
+    }
+    serde_json::from_value(item.clone()).ok()
+}
+
+/// Reads a `turn-item.updated` event if its item is a request for the user.
+pub fn request_from_event(event: &Value) -> Option<RequestItem> {
+    if event.get("type")?.as_str()? != "turn-item.updated" {
+        return None;
+    }
+    request_from_item(event.get("payload")?)
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -262,6 +332,32 @@ pub fn send_message(thread_id: &str, text: &str, thread_is_working: bool) -> Val
         "text": text,
         "attachments": [],
         "dispatchMode": dispatch_mode,
+    })
+}
+
+/// Answers an approval: `accept`, `acceptForSession` or `decline`.
+pub fn respond_approval(thread_id: &str, request_id: &str, decision: &str) -> Value {
+    json!({
+        "type": "runtime-request.respond",
+        "commandId": new_id(),
+        "threadId": thread_id,
+        "requestId": request_id,
+        "decision": decision,
+    })
+}
+
+/// Answers questions, keyed by question id.
+pub fn answer_questions(
+    thread_id: &str,
+    request_id: &str,
+    answers: &std::collections::BTreeMap<String, String>,
+) -> Value {
+    json!({
+        "type": "runtime-request.respond",
+        "commandId": new_id(),
+        "threadId": thread_id,
+        "requestId": request_id,
+        "answers": answers,
     })
 }
 
@@ -393,5 +489,28 @@ mod tests {
             ..Default::default()
         };
         assert!(!lineage.is_listed());
+    }
+
+    #[test]
+    fn reads_requests_from_turn_items() {
+        let approval = json!({
+            "type": "turn-item.updated",
+            "payload": {
+                "id": "turn-item:a", "type": "approval_request", "status": "waiting",
+                "requestId": "r1", "requestKind": "command", "prompt": "run ls?"
+            }
+        });
+        let item = request_from_event(&approval).expect("approval");
+        assert!(item.is_waiting() && !item.is_question());
+        assert_eq!(item.prompt.as_deref(), Some("run ls?"));
+        let question = json!({
+            "id": "turn-item:q", "type": "user_input_request", "status": "waiting", "requestId": "r2",
+            "questions": [{ "id": "color", "header": "Color", "question": "Which color?",
+                "options": [{ "label": "Red", "description": "" }] }]
+        });
+        let item = request_from_item(&question).expect("question");
+        assert!(item.is_question());
+        assert_eq!(item.questions[0].options[0].label, "Red");
+        assert!(request_from_item(&json!({ "type": "user_message", "id": "x" })).is_none());
     }
 }
