@@ -97,7 +97,8 @@ let threadCounter = 0;
 let turnCounter = 0;
 const threads = new Map();
 
-const thread = (id, cwd) => ({ id, cwd: cwd ?? process.cwd(), preview: "", createdAt: 0, updatedAt: 0 });
+const nowSec = () => Math.floor(Date.now() / 1000);
+const thread = (id, cwd) => ({ id, cwd: cwd ?? process.cwd(), preview: "", createdAt: nowSec(), updatedAt: nowSec() });
 
 function startTurn(id, params) {
   const threadId = params.threadId;
@@ -110,9 +111,10 @@ function startTurn(id, params) {
   setTimeout(() => {
     notify("turn/started", notificationOf("turn/started", { threadId, turn }));
     const item = { type: "agentMessage", id: itemId, text: "" };
-    notify("item/started", notificationOf("item/started", { threadId, turnId, item }));
+    const startedAtMs = Date.now();
+    notify("item/started", notificationOf("item/started", { threadId, turnId, item, startedAtMs }));
     notify("item/agentMessage/delta", notificationOf("item/agentMessage/delta", { threadId, turnId, itemId, delta: reply }));
-    notify("item/completed", notificationOf("item/completed", { threadId, turnId, item: { ...item, text: reply } }));
+    notify("item/completed", notificationOf("item/completed", { threadId, turnId, item: { ...item, text: reply }, startedAtMs, completedAtMs: Date.now() }));
     notify("turn/completed", notificationOf("turn/completed", { threadId, turn: { ...turn, status: "completed" } }));
   }, 10);
 }
