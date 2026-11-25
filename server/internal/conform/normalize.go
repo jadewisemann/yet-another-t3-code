@@ -13,11 +13,14 @@ var (
 	timeRe = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})`)
 )
 
-// volatileNumbers are numeric fields whose value depends on the runtime, not
-// on the behavior under test.
-var volatileNumbers = map[string]bool{
+// volatileFields are fields whose value depends on the run, not on the
+// behavior under test. Their values become "<field>".
+var volatileFields = map[string]bool{
+	"traceId":    true, // random trace id in auth errors
+	"expires_in": true, // seconds left, which ticks during the run
 	"fiberId": true, // Effect fiber ids in Interrupt causes
 	"pid":     true,
+	"port":    true, // a free port picked per run
 }
 
 // Normalizer replaces values that differ between runs (ids, times, paths)
@@ -46,6 +49,11 @@ func (n *Normalizer) Value(raw json.RawMessage) any {
 }
 
 func (n *Normalizer) walk(key string, v any) any {
+	if volatileFields[key] {
+		if _, isObject := v.(map[string]any); !isObject {
+			return "<" + key + ">"
+		}
+	}
 	switch x := v.(type) {
 	case map[string]any:
 		keys := make([]string, 0, len(x))
@@ -67,9 +75,6 @@ func (n *Normalizer) walk(key string, v any) any {
 	case string:
 		return n.str(x)
 	case json.Number:
-		if volatileNumbers[key] {
-			return "<" + key + ">"
-		}
 		// Millisecond timestamps.
 		if i, err := x.Int64(); err == nil && i > 1_000_000_000_000 && i < 10_000_000_000_000 {
 			return "<epoch-ms>"

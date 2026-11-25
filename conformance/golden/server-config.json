@@ -1,0 +1,43 @@
+{
+  "scenario": "server-config",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "method": "server.getConfig",
+      "exit": {
+        "_tag": "Success",
+        "valueKeys": [
+          "auth",
+          "availableEditors",
+          "cwd",
+          "directEndpoints",
+          "environment",
+          "hostname",
+          "issues",
+          "keybindings",
+          "keybindingsConfigPath",
+          "newProjectsRoot",
+          "observability",
+          "providers",
+          "remoteOpenTargets",
+          "scratchWorkspaceRoot",
+          "secretProviderSettings",
+          "secretReferences",
+          "secretRequestReferences",
+          "serverTime",
+          "settings",
+          "shellOlderSettled",
+          "shellResumeCompletionMarker",
+          "shellThreadFamilies",
+          "threadFind",
+          "threadFindProgressive",
+          "threadLinkMetadata",
+          "threadResumeCompletionMarker",
+          "threadSnapshotPagination"
+        ]
+      }
+    }
+  ]
+}

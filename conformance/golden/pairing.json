@@ -1,0 +1,70 @@
+{
+  "scenario": "pairing",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "cli",
+      "as": "auth pairing create --json --label conformance",
+      "body": {
+        "credential": "<var:pairing>",
+        "expiresAt": "<time>",
+        "id": "<uuid#1>",
+        "label": "conformance",
+        "scopes": [
+          "orchestration:read",
+          "orchestration:operate",
+          "settings:write",
+          "providers:manage",
+          "environment:maintain",
+          "preview:operate",
+          "diagnostics:read",
+          "terminal:read",
+          "terminal:operate",
+          "source-control:write",
+          "filesystem:read",
+          "filesystem:write",
+          "relay:read",
+          "access:read",
+          "access:write",
+          "relay:write"
+        ]
+      }
+    },
+    {
+      "step": 1,
+      "op": "http",
+      "as": "/oauth/token",
+      "status": 200,
+      "body": {
+        "access_token": "<var:access>",
+        "expires_in": "<expires_in>",
+        "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+        "scope": "orchestration:read orchestration:operate settings:write providers:manage environment:maintain preview:operate diagnostics:read terminal:read terminal:operate source-control:write filesystem:read filesystem:write relay:read access:read access:write relay:write",
+        "token_type": "Bearer"
+      }
+    },
+    {
+      "step": 2,
+      "op": "connect",
+      "status": 101
+    },
+    {
+      "step": 3,
+      "op": "http",
+      "as": "/oauth/token",
+      "status": 401,
+      "body": {
+        "_tag": "EnvironmentAuthInvalidError",
+        "code": "auth_invalid",
+        "reason": "invalid_credential",
+        "traceId": "<traceId>"
+      }
+    },
+    {
+      "step": 4,
+      "op": "connect",
+      "status": 401
+    }
+  ]
+}

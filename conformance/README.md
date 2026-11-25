@@ -32,8 +32,13 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 | `subscribe` | 스트림 요청을 보냅니다. 값은 백그라운드에서 모입니다. | 없음 |
 | `await` | 스트림에서 `match`와 일치하는 값이 올 때까지 기다립니다. `match`는 부분 일치입니다. | 지난 `await` 이후 받은 값부터 일치한 값까지 |
 | `interrupt` | 스트림을 끊고 `Exit`를 기다립니다. 남은 값은 기록하지 않습니다. | `exit` |
-| `http` | HTTP 요청을 보냅니다. `auth: true`이면 토큰을 붙입니다. | `record`에 따라 상태 코드, 최상위 키, 또는 본문 전체 |
+| `http` | HTTP 요청을 보냅니다. `auth: true`이면 러너의 토큰을, `bearer`가 있으면 그 값을 붙입니다. `body`, `contentType`도 보낼 수 있습니다. | `record`에 따라 상태 코드, 최상위 키, 또는 본문 전체 |
+| `cli` | 서버 바이너리를 `args`로 실행합니다. `--base-dir`가 자동으로 붙습니다. | 종료 코드와 출력(`record`에 따라) |
+| `file` | 데이터 폴더 아래 파일을 읽습니다. | 파일 내용(`record`에 따라) |
+| `connect` | `bearer` 토큰으로 `/ws`를 하나 더 열어 봅니다. | 성공하면 101, 아니면 거절된 상태 코드 |
 
-자리 표시자: `${workspace}`(작업 폴더), `${base}`(데이터 폴더), `${uuid:이름}`(이름별로 고정되는 새 UUID), `${id:이름}`, `${now}`. 기록할 때는 이 값들이 다시 `<workspace>`, `<uuid:이름>` 같은 표시로 바뀌고, 그 밖의 UUID는 처음 나온 순서대로 `<uuid#1>`, 시각은 `<time>`이 됩니다.
+`call`, `http`, `cli`는 `capture`로 JSON 결과의 문자열 필드를 변수로 저장할 수 있고, 이후 단계에서 `${var:이름}`으로 씁니다. `await`의 `record: "match"`는 일치한 값 하나만 기록하고, `ignore`에 적은 필드는 `<ignored>`로 기록합니다. 업스트림 자체가 실행마다 다르게 보내는 값에만 씁니다.
+
+자리 표시자: `${workspace}`(작업 폴더), `${base}`(데이터 폴더), `${uuid:이름}`(이름별로 고정되는 새 UUID), `${id:이름}`, `${now}`, `${origin}`, `${port}`, `${var:이름}`. 기록할 때는 이 값들이 다시 `<workspace>`, `<uuid:이름>` 같은 표시로 바뀌고, 그 밖의 UUID는 처음 나온 순서대로 `<uuid#1>`, 시각은 `<time>`이 됩니다.
 
 `await` 사이에 오는 값의 묶음 단위(`Chunk` 경계)는 기록하지 않습니다. 실행 타이밍에 따라 달라지기 때문입니다.

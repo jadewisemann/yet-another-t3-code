@@ -30,7 +30,9 @@ type Target struct {
 }
 
 func (t *Target) Origin() string { return fmt.Sprintf("http://127.0.0.1:%d", t.Port) }
-func (t *Target) WSURL() string  { return fmt.Sprintf("ws://127.0.0.1:%d/ws?orchestrationProtocol=2&clientSurface=desktop", t.Port) }
+func (t *Target) WSURL() string {
+	return fmt.Sprintf("ws://127.0.0.1:%d/ws?orchestrationProtocol=2&clientSurface=desktop", t.Port)
+}
 
 // Start launches bin with a fresh data dir and workspace under root.
 func Start(ctx context.Context, bin, root string) (*Target, error) {

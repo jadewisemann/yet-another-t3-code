@@ -1,0 +1,22 @@
+{
+  "scenario": "runtime-state",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "file",
+      "as": "userdata/server-runtime.json",
+      "body": {
+        "host": "127.0.0.1",
+        "managedPolicy": null,
+        "origin": "<origin>",
+        "ownerId": "<uuid#1>",
+        "pid": "<pid>",
+        "port": "<port>",
+        "serverVersion": "0.1.11",
+        "startedAt": "<time>",
+        "version": 1
+      }
+    }
+  ]
+}
