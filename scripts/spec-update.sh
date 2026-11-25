@@ -24,7 +24,7 @@ git clone --quiet --depth 1 --branch "$ref" https://github.com/pingdotgg/t3code.
 old="$(mktemp -d)"
 cp "$root/spec/generated/rpc.json" "$old/rpc.json"
 
-(cd "$root/tools/spec-extract" && bun install --frozen-lockfile >/dev/null && bun extract.ts "$cache" "$root/spec/generated")
+(cd "$root/tools/spec-extract" && bun install --frozen-lockfile >/dev/null && bun extract.ts "$cache" "$root/spec/generated" && bun extract-codex.ts "$cache" "$root/spec/generated")
 (cd "$root/server" && go run ./cmd/specdiff "$old/rpc.json" "$root/spec/generated/rpc.json") || true
 (cd "$root/server" && go run ./cmd/speccov)
 echo "${ref#v}" > "$root/spec/upstream-version"
