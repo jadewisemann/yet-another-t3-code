@@ -1,0 +1,2857 @@
+{
+  "scenario": "runtime-requests",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "archivedAt": null,
+          "autoPull": false,
+          "createdAt": "<time>",
+          "defaultModelSelection": null,
+          "defaultThreadEnvMode": null,
+          "deletedAt": null,
+          "faviconPath": null,
+          "id": "<uuid:project>",
+          "pinnedAt": null,
+          "projectIcon": null,
+          "repositoryIdentity": null,
+          "scripts": [],
+          "title": "workspace",
+          "updatedAt": "<time>",
+          "workspaceRoot": "<workspace>"
+        }
+      }
+    },
+    {
+      "step": 1,
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 2,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": 1,
+            "threads": []
+          }
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 2
+        }
+      }
+    },
+    {
+      "step": 4,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": 2,
+          "thread": {
+            "activeProviderThreadId": null,
+            "activeRunId": null,
+            "activityRunStartedAt": null,
+            "activityRunStatus": null,
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 0,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": null,
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": null,
+            "latestRunRequestedAt": null,
+            "latestRunStartedAt": null,
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": null,
+            "latestUserMessageAt": null,
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "codex",
+              "model": "gpt-5.5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": null,
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [],
+            "providerInstanceId": "codex",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "idle",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 0,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread"
+    },
+    {
+      "step": 6,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "kind": "snapshot",
+          "projection": {
+            "attempts": [],
+            "checkpointScopes": [],
+            "checkpoints": [],
+            "contextHandoffs": [],
+            "contextTransfers": [],
+            "messages": [],
+            "nodes": [],
+            "plans": [],
+            "providerSessions": [],
+            "providerThreads": [],
+            "providerTurns": [],
+            "runs": [],
+            "runtimeRequests": [],
+            "subagents": [],
+            "thread": {
+              "activeProviderThreadId": null,
+              "archivedAt": null,
+              "branch": null,
+              "createdAt": "<time>",
+              "createdBy": "user",
+              "creationSource": "web",
+              "deletedAt": null,
+              "forkedFrom": null,
+              "id": "<uuid:thread>",
+              "interactionMode": "default",
+              "lastVisitedAt": null,
+              "lineage": {
+                "parentThreadId": null,
+                "relationshipToParent": null,
+                "rootThreadId": "<uuid:thread>"
+              },
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "projectId": "<uuid:project>",
+              "providerInstanceId": "codex",
+              "pullRequests": [],
+              "runtimeMode": "approval-required",
+              "settledAt": null,
+              "settledOverride": null,
+              "snoozedAt": null,
+              "snoozedUntil": null,
+              "title": "First thread",
+              "updatedAt": "<time>",
+              "worktreePath": null
+            },
+            "turnItems": [],
+            "updatedAt": "<time>",
+            "visibleTurnItems": []
+          },
+          "snapshotSequence": 2
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "op": "call",
+      "as": "approve",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 10
+        }
+      }
+    },
+    {
+      "step": 8,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#1>",
+            "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "completionWake": "always",
+              "id": "turn-item:provider:codex:native-item:fake-item-1-cmd",
+              "input": "echo hi",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+              "ordinal": 1000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "running",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#2>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "ordinal": 1000003,
+              "parentItemId": null,
+              "prompt": "fake codex wants to run a command",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "requestId": "<var:request1>",
+              "requestKind": "command",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "waiting",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "approval_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#4>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request1>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:codex:shared",
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 11,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": "<ignored>",
+          "thread": {
+            "activeProviderThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+            "activeRunId": "run:thread:<uuid:thread>:ordinal:1",
+            "activityRunStartedAt": "<time>",
+            "activityRunStatus": "running",
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 3,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": "<time>",
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": "run:thread:<uuid:thread>:ordinal:1",
+            "latestRunRequestedAt": "<time>",
+            "latestRunStartedAt": "<time>",
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": "<time>",
+            "latestUserMessageAt": "<time>",
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "codex",
+              "model": "gpt-5.5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": {
+              "blocking": true,
+              "createdAt": "<time>",
+              "id": "<var:request1>",
+              "kind": "command"
+            },
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [
+              "codex"
+            ],
+            "providerInstanceId": "codex",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "running",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 3,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 12,
+      "op": "call",
+      "as": "accept",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 25
+        }
+      }
+    },
+    {
+      "step": 13,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-accept>:<uuid#5>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "decision": "accept",
+              "id": "<var:request1>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "resolvedAt": "<time>",
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:codex:shared",
+                "type": "live"
+              },
+              "status": "resolved"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 14,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-accept>:<uuid#6>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+              "ordinal": 1000003,
+              "parentItemId": null,
+              "prompt": "fake codex wants to run a command",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "requestId": "<var:request1>",
+              "requestKind": "command",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "approval_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 15,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#7>",
+            "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "completionWake": "always",
+              "exitCode": 0,
+              "id": "turn-item:provider:codex:native-item:fake-item-1-cmd",
+              "input": "echo hi",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-1-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+              "ordinal": 1000002,
+              "outputOmitted": true,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 16,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1:<uuid#8>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:1",
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "ordinal": 1,
+              "providerInstanceId": "codex",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-approve>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 17,
+      "op": "call",
+      "as": "again",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 47
+        }
+      }
+    },
+    {
+      "step": 18,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#9>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request2>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-2-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:codex:shared",
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 19,
+      "op": "call",
+      "as": "decline",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 61
+        }
+      }
+    },
+    {
+      "step": 20,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-decline>:<uuid#11>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-2-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+              "ordinal": 2000003,
+              "parentItemId": null,
+              "prompt": "fake codex wants to run a command",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+              "requestId": "<var:request2>",
+              "requestKind": "command",
+              "runId": "run:thread:<uuid:thread>:ordinal:2",
+              "startedAt": "<time>",
+              "status": "cancelled",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "approval_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 21,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#12>",
+            "nodeId": "node:provider:codex:native-item:fake-item-2-cmd",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "completionWake": "always",
+              "id": "turn-item:provider:codex:native-item:fake-item-2-cmd",
+              "input": "echo hi",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-2-cmd",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-2-cmd",
+              "ordinal": 2000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+              "runId": "run:thread:<uuid:thread>:ordinal:2",
+              "startedAt": "<time>",
+              "status": "cancelled",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 22,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A2:<uuid#13>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:2",
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "ordinal": 2,
+              "providerInstanceId": "codex",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-again>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 23,
+      "op": "call",
+      "as": "ask",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 82
+        }
+      }
+    },
+    {
+      "step": 24,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#14>",
+            "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "id": "turn-item:provider:codex:native-item:fake-item-3-ask",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-3-ask",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+              "ordinal": 3000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+              "questions": [
+                {
+                  "header": "Color",
+                  "id": "color",
+                  "options": [
+                    {
+                      "description": "The red one",
+                      "label": "Red"
+                    },
+                    {
+                      "description": "The blue one",
+                      "label": "Blue"
+                    }
+                  ],
+                  "question": "Which color?"
+                }
+              ],
+              "requestId": "<var:request3>",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "startedAt": "<time>",
+              "status": "waiting",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "user_input_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 25,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#15>",
+            "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request3>",
+              "kind": "user_input",
+              "nativeRequestRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-3-ask",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:codex:shared",
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 26,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": "<ignored>",
+          "thread": {
+            "activeProviderThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+            "activeRunId": "run:thread:<uuid:thread>:ordinal:3",
+            "activityRunStartedAt": "<time>",
+            "activityRunStatus": "running",
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 12,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": "<time>",
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": "run:thread:<uuid:thread>:ordinal:3",
+            "latestRunRequestedAt": "<time>",
+            "latestRunStartedAt": "<time>",
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": "<time>",
+            "latestUserMessageAt": "<time>",
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "codex",
+              "model": "gpt-5.5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": {
+              "blocking": true,
+              "createdAt": "<time>",
+              "id": "<var:request3>",
+              "kind": "user_input"
+            },
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [
+              "codex"
+            ],
+            "providerInstanceId": "codex",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "running",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 12,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 27,
+      "op": "call",
+      "as": "answer",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 94
+        }
+      }
+    },
+    {
+      "step": 28,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-answer>:<uuid#16>",
+            "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:provider:codex:native-item:fake-item-3-ask",
+              "nativeItemRef": {
+                "driver": "codex",
+                "nativeId": "fake-item-3-ask",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+              "ordinal": 3000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+              "questionAnswer": {
+                "answers": {
+                  "color": "Red"
+                },
+                "attachmentsByQuestionId": {},
+                "questionTextById": {
+                  "color": "Which color?"
+                },
+                "requestId": "<var:request3>"
+              },
+              "questions": [
+                {
+                  "header": "Color",
+                  "id": "color",
+                  "options": [
+                    {
+                      "description": "The red one",
+                      "label": "Red"
+                    },
+                    {
+                      "description": "The blue one",
+                      "label": "Blue"
+                    }
+                  ],
+                  "question": "Which color?"
+                }
+              ],
+              "requestId": "<var:request3>",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "user_input_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 29,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "codex",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3Acodex%3Ashared:<uuid#17>",
+            "nodeId": "node:provider:codex:native-item:fake-item-3",
+            "occurredAt": "<time>",
+            "payload": {
+              "attachments": [],
+              "createdAt": "<time>",
+              "createdBy": "agent",
+              "creationSource": "provider",
+              "id": "message:provider:codex:native-item:fake-item-3",
+              "nodeId": "node:provider:codex:native-item:fake-item-3",
+              "role": "assistant",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "streaming": false,
+              "text": "fake codex reply to: ask a question (answers: {\"color\":{\"answers\":[\"Red\"]}})",
+              "threadId": "<uuid:thread>",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "message.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 30,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A3:<uuid#18>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:3",
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "ordinal": 3,
+              "providerInstanceId": "codex",
+              "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-ask>"
+            },
+            "providerInstanceId": "codex",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 31,
+      "op": "interrupt",
+      "as": "thread",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    },
+    {
+      "step": 32,
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread"
+    },
+    {
+      "step": 33,
+      "op": "await",
+      "as": "after",
+      "values": [
+        {
+          "kind": "snapshot",
+          "projection": {
+            "attempts": [
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "nativeThreadId": "fake-thread-1",
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed"
+              },
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "nativeThreadId": "fake-thread-1",
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed"
+              },
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "nativeThreadId": "fake-thread-1",
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed"
+              }
+            ],
+            "checkpointScopes": [
+              {
+                "advancesAppRunCount": true,
+                "createdAt": "<time>",
+                "cwd": "<workspace>",
+                "id": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "kind": "root_run",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinalWithinParent": 0,
+                "parentScopeId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "checkpoints": [
+              {
+                "appRunOrdinal": null,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:0",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinalWithinScope": 0,
+                "parentCheckpointId": null,
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/0",
+                "runId": null,
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 1,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinalWithinScope": 1,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:0",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 2,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinalWithinScope": 2,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/2",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 3,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinalWithinScope": 3,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/3",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "contextHandoffs": [],
+            "contextTransfers": [],
+            "messages": [
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-approve>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "streaming": false,
+                "text": "approve this",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:codex:native-item:fake-item-1",
+                "nodeId": "node:provider:codex:native-item:fake-item-1",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "streaming": false,
+                "text": "fake codex reply to: approve this (decision: accept)",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-again>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "streaming": false,
+                "text": "approve again",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:codex:native-item:fake-item-2",
+                "nodeId": "node:provider:codex:native-item:fake-item-2",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "streaming": false,
+                "text": "fake codex reply to: approve again (decision: decline)",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-ask>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "streaming": false,
+                "text": "ask a question",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:codex:native-item:fake-item-3",
+                "nodeId": "node:provider:codex:native-item:fake-item-3",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "streaming": false,
+                "text": "fake codex reply to: ask a question (answers: {\"color\":{\"answers\":[\"Red\"]}})",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              }
+            ],
+            "nodes": [
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-1-cmd",
+                "kind": "tool_call",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1-cmd",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                "kind": "approval_request",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1-cmd",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": "<var:request1>",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-1",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-2-cmd",
+                "kind": "tool_call",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2-cmd",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "cancelled",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                "kind": "approval_request",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2-cmd",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:provider:codex:native-item:fake-item-2-cmd",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": "<var:request2>",
+                "startedAt": "<time>",
+                "status": "cancelled",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-2",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-3-ask",
+                "kind": "user_input_request",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-3-ask",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": "<var:request3>",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:codex:native-item:fake-item-3",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-3",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "plans": [],
+            "providerSessions": [
+              {
+                "capabilities": {
+                  "approvals": {
+                    "approvalCallbacksAreLiveOnly": true,
+                    "approvalsCanOriginateFromSubagents": true,
+                    "approvalsHaveNativeRequestIds": true,
+                    "supportsApplyPatchApproval": true,
+                    "supportsCommandApproval": true,
+                    "supportsFileChangeApproval": true,
+                    "supportsFileReadApproval": true
+                  },
+                  "checkpointing": {
+                    "appCanCheckpointFilesystem": true,
+                    "providerCanReadConversationSnapshot": true,
+                    "providerCanRollbackConversation": true,
+                    "providerRollbackReturnsSnapshot": true,
+                    "supportsNestedCheckpointScopes": true
+                  },
+                  "context": {
+                    "acceptsDeveloperContext": true,
+                    "acceptsSyntheticUserContext": true,
+                    "acceptsSystemContext": true,
+                    "canConsumeHandoffSummaries": true,
+                    "canGenerateSummaries": true,
+                    "maxRecommendedHandoffChars": null,
+                    "supportsDeltaHandoff": true,
+                    "supportsFullThreadHandoff": true
+                  },
+                  "identity": {
+                    "nativeItemIds": "strong",
+                    "nativeRequestIds": "strong",
+                    "nativeThreadIds": "strong",
+                    "nativeTurnIds": "strong"
+                  },
+                  "planning": {
+                    "emitsPlanUpdated": true,
+                    "emitsProposedPlan": true,
+                    "emitsTodoList": true,
+                    "planDeltasHaveItemIds": true,
+                    "supportsStructuredQuestions": true
+                  },
+                  "runtimePolicy": {
+                    "enforcement": "native"
+                  },
+                  "sessions": {
+                    "pendingRequestsSurviveRestart": false,
+                    "supportsModelSwitchInSession": true,
+                    "supportsMultipleProviderThreadsPerSession": true,
+                    "supportsProviderSwitchingViaHandoff": true,
+                    "supportsRuntimeModeSwitchInSession": true
+                  },
+                  "streaming": {
+                    "emitsMessageCompleted": true,
+                    "streamsAssistantText": true,
+                    "streamsPlanText": true,
+                    "streamsReasoning": true,
+                    "streamsToolOutput": true
+                  },
+                  "subagents": {
+                    "canCloseSubagents": true,
+                    "canForkSubagentThread": true,
+                    "canWaitForSubagents": true,
+                    "emitsSubagentLifecycle": true,
+                    "exposesSubagentThreadIds": true,
+                    "supportsSubagents": true
+                  },
+                  "threads": {
+                    "canCreateEmptyThread": true,
+                    "canForkFromSubagentThread": true,
+                    "canForkFromTurn": true,
+                    "canForkThread": true,
+                    "canForkWhileSourceRunning": true,
+                    "canReadThreadSnapshot": true,
+                    "canRollbackThread": true,
+                    "exposesNativeThreadId": true
+                  },
+                  "tools": {
+                    "emitsToolCompleted": true,
+                    "emitsToolOutput": true,
+                    "emitsToolStarted": true,
+                    "exposesToolItemIds": true,
+                    "supportsDynamicToolCallbacks": true,
+                    "supportsMcpTools": true
+                  },
+                  "turns": {
+                    "activeSteeringDuringCompaction": true,
+                    "emitsTurnCompleted": true,
+                    "emitsTurnStarted": true,
+                    "exposesNativeTurnId": true,
+                    "supportsActiveSteering": true,
+                    "supportsInterrupt": true,
+                    "supportsNativeResume": true,
+                    "supportsQueuedMessages": true,
+                    "supportsSteeringByInterruptRestart": true,
+                    "terminalStatusQuality": "strong"
+                  }
+                },
+                "createdAt": "<time>",
+                "cwd": "<workspace>",
+                "driver": "codex",
+                "extensionStatuses": [],
+                "id": "provider-session:provider-instance:codex:shared",
+                "lastError": null,
+                "model": "gpt-5.5",
+                "providerInstanceId": "codex",
+                "status": "ready",
+                "updatedAt": "<time>"
+              }
+            ],
+            "providerThreads": [
+              {
+                "appThreadId": "<uuid:thread>",
+                "contextUsage": null,
+                "createdAt": "<time>",
+                "driver": "codex",
+                "firstRunOrdinal": 1,
+                "forkedFrom": null,
+                "goal": null,
+                "handoffIds": [],
+                "id": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "lastRunOrdinal": 3,
+                "nativeConversationHeadRef": null,
+                "nativeMetadata": null,
+                "nativeThreadRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-thread-1",
+                  "strength": "strong"
+                },
+                "ownerNodeId": null,
+                "pendingBackgroundTasks": [],
+                "providerInstanceId": "codex",
+                "providerSessionId": "provider-session:provider-instance:codex:shared",
+                "status": "idle",
+                "updatedAt": "<time>"
+              }
+            ],
+            "providerTurns": [
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "nativeTurnRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-turn-1",
+                  "strength": "strong"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "turnTokenUsage": {
+                  "hasSubagents": false,
+                  "usageScope": "main_agent",
+                  "usageStatus": "unavailable"
+                }
+              },
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "nativeTurnRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-turn-2",
+                  "strength": "strong"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "turnTokenUsage": {
+                  "hasSubagents": false,
+                  "usageScope": "main_agent",
+                  "usageStatus": "unavailable"
+                }
+              },
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "nativeTurnRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-turn-3",
+                  "strength": "strong"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "turnTokenUsage": {
+                  "hasSubagents": false,
+                  "usageScope": "main_agent",
+                  "usageStatus": "unavailable"
+                }
+              }
+            ],
+            "runs": [
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:1",
+                "modelSelection": {
+                  "instanceId": "codex",
+                  "model": "gpt-5.5"
+                },
+                "ordinal": 1,
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-approve>"
+              },
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:2",
+                "modelSelection": {
+                  "instanceId": "codex",
+                  "model": "gpt-5.5"
+                },
+                "ordinal": 2,
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-again>"
+              },
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:3",
+                "modelSelection": {
+                  "instanceId": "codex",
+                  "model": "gpt-5.5"
+                },
+                "ordinal": 3,
+                "providerInstanceId": "codex",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-ask>"
+              }
+            ],
+            "runtimeRequests": [
+              {
+                "createdAt": "<time>",
+                "decision": "accept",
+                "id": "<var:request1>",
+                "kind": "command",
+                "nativeRequestRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:codex:shared",
+                  "type": "live"
+                },
+                "status": "resolved"
+              },
+              {
+                "createdAt": "<time>",
+                "decision": "decline",
+                "id": "<var:request2>",
+                "kind": "command",
+                "nativeRequestRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:codex:shared",
+                  "type": "live"
+                },
+                "status": "resolved"
+              },
+              {
+                "answers": {
+                  "color": "Red"
+                },
+                "createdAt": "<time>",
+                "id": "<var:request3>",
+                "kind": "user_input",
+                "nativeRequestRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-3-ask",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:codex:shared",
+                  "type": "live"
+                },
+                "status": "resolved"
+              }
+            ],
+            "subagents": [],
+            "thread": {
+              "activeProviderThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "archivedAt": null,
+              "branch": null,
+              "createdAt": "<time>",
+              "createdBy": "user",
+              "creationSource": "web",
+              "deletedAt": null,
+              "forkedFrom": null,
+              "id": "<uuid:thread>",
+              "interactionMode": "default",
+              "lastVisitedAt": "<time>",
+              "lineage": {
+                "parentThreadId": null,
+                "relationshipToParent": null,
+                "rootThreadId": "<uuid:thread>"
+              },
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "projectId": "<uuid:project>",
+              "providerInstanceId": "codex",
+              "pullRequests": [],
+              "runtimeMode": "approval-required",
+              "settledAt": null,
+              "settledOverride": null,
+              "snoozedAt": null,
+              "snoozedUntil": null,
+              "title": "First thread",
+              "updatedAt": "<time>",
+              "worktreePath": null
+            },
+            "turnItems": [
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-approve>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-approve>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "approve this",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "completionWake": "always",
+                "exitCode": 0,
+                "id": "turn-item:provider:codex:native-item:fake-item-1-cmd",
+                "input": "echo hi",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+                "ordinal": 1000002,
+                "outputOmitted": true,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "command_execution",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                "ordinal": 1000003,
+                "parentItemId": null,
+                "prompt": "fake codex wants to run a command",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "requestId": "<var:request1>",
+                "requestKind": "command",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "approval_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:codex:native-item:fake-item-1",
+                "messageId": "message:provider:codex:native-item:fake-item-1",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-1",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-1",
+                "ordinal": 1000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake codex reply to: approve this (decision: accept)",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1000005,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-again>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-again>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "approve again",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "completionWake": "always",
+                "id": "turn-item:provider:codex:native-item:fake-item-2-cmd",
+                "input": "echo hi",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-2-cmd",
+                "ordinal": 2000002,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "cancelled",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "command_execution",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2-cmd",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                "ordinal": 2000003,
+                "parentItemId": null,
+                "prompt": "fake codex wants to run a command",
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "requestId": "<var:request2>",
+                "requestKind": "command",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "cancelled",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "approval_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:codex:native-item:fake-item-2",
+                "messageId": "message:provider:codex:native-item:fake-item-2",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-2",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-2",
+                "ordinal": 2000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake codex reply to: approve again (decision: decline)",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2000005,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-ask>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-ask>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "ask a question",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:codex:native-item:fake-item-3-ask",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-3-ask",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+                "ordinal": 3000002,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "questionAnswer": {
+                  "answers": {
+                    "color": "Red"
+                  },
+                  "attachmentsByQuestionId": {},
+                  "questionTextById": {
+                    "color": "Which color?"
+                  },
+                  "requestId": "<var:request3>"
+                },
+                "questions": [
+                  {
+                    "header": "Color",
+                    "id": "color",
+                    "options": [
+                      {
+                        "description": "The red one",
+                        "label": "Red"
+                      },
+                      {
+                        "description": "The blue one",
+                        "label": "Blue"
+                      }
+                    ],
+                    "question": "Which color?"
+                  }
+                ],
+                "requestId": "<var:request3>",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_input_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:codex:native-item:fake-item-3",
+                "messageId": "message:provider:codex:native-item:fake-item-3",
+                "nativeItemRef": {
+                  "driver": "codex",
+                  "nativeId": "fake-item-3",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:codex:native-item:fake-item-3",
+                "ordinal": 3000003,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake codex reply to: ask a question (answers: {\"color\":{\"answers\":[\"Red\"]}})",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              }
+            ],
+            "updatedAt": "<time>",
+            "visibleTurnItems": [
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-approve>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-approve>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                  "ordinal": 1000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "approve this",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 0,
+                "sourceItemId": "turn-item:message:<uuid:cmd-approve>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "completionWake": "always",
+                  "exitCode": 0,
+                  "id": "turn-item:provider:codex:native-item:fake-item-1-cmd",
+                  "input": "echo hi",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-1-cmd",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-1-cmd",
+                  "ordinal": 1000002,
+                  "outputOmitted": true,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "command_execution",
+                  "updatedAt": "<time>"
+                },
+                "position": 1,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-1-cmd",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-1-cmd",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                  "ordinal": 1000003,
+                  "parentItemId": null,
+                  "prompt": "fake codex wants to run a command",
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                  "requestId": "<var:request1>",
+                  "requestKind": "command",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "approval_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 2,
+                "sourceItemId": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-1%3Anative-request%3Afake-item-1-cmd%3A<uuid#3>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:codex:native-item:fake-item-1",
+                  "messageId": "message:provider:codex:native-item:fake-item-1",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-1",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-1",
+                  "ordinal": 1000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake codex reply to: approve this (decision: accept)",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 3,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-1",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                  "ordinal": 1000005,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 4,
+                "sourceItemId": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-again>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-again>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                  "ordinal": 2000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "approve again",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 5,
+                "sourceItemId": "turn-item:message:<uuid:cmd-again>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "completionWake": "always",
+                  "id": "turn-item:provider:codex:native-item:fake-item-2-cmd",
+                  "input": "echo hi",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-2-cmd",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-2-cmd",
+                  "ordinal": 2000002,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "cancelled",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "command_execution",
+                  "updatedAt": "<time>"
+                },
+                "position": 6,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-2-cmd",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-2-cmd",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                  "ordinal": 2000003,
+                  "parentItemId": null,
+                  "prompt": "fake codex wants to run a command",
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                  "requestId": "<var:request2>",
+                  "requestKind": "command",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "cancelled",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "approval_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 7,
+                "sourceItemId": "turn-item:runtime-request:runtime-request%3Aprovider%3Acodex%3Aprovider-turn%3Aprovider-turn%253Aprovider%253Acodex%253Anative-turn%253Afake-turn-2%3Anative-request%3Afake-item-2-cmd%3A<uuid#10>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:codex:native-item:fake-item-2",
+                  "messageId": "message:provider:codex:native-item:fake-item-2",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-2",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-2",
+                  "ordinal": 2000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-2",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake codex reply to: approve again (decision: decline)",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 8,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-2",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                  "ordinal": 2000005,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 9,
+                "sourceItemId": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-ask>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-ask>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                  "ordinal": 3000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "ask a question",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 10,
+                "sourceItemId": "turn-item:message:<uuid:cmd-ask>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:codex:native-item:fake-item-3-ask",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-3-ask",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-3-ask",
+                  "ordinal": 3000002,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                  "questionAnswer": {
+                    "answers": {
+                      "color": "Red"
+                    },
+                    "attachmentsByQuestionId": {},
+                    "questionTextById": {
+                      "color": "Which color?"
+                    },
+                    "requestId": "<var:request3>"
+                  },
+                  "questions": [
+                    {
+                      "header": "Color",
+                      "id": "color",
+                      "options": [
+                        {
+                          "description": "The red one",
+                          "label": "Red"
+                        },
+                        {
+                          "description": "The blue one",
+                          "label": "Blue"
+                        }
+                      ],
+                      "question": "Which color?"
+                    }
+                  ],
+                  "requestId": "<var:request3>",
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_input_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 11,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-3-ask",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:codex:native-item:fake-item-3",
+                  "messageId": "message:provider:codex:native-item:fake-item-3",
+                  "nativeItemRef": {
+                    "driver": "codex",
+                    "nativeId": "fake-item-3",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:codex:native-item:fake-item-3",
+                  "ordinal": 3000003,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:codex:native-turn:fake-turn-3",
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake codex reply to: ask a question (answers: {\"color\":{\"answers\":[\"Red\"]}})",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 12,
+                "sourceItemId": "turn-item:provider:codex:native-item:fake-item-3",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                  "ordinal": 3000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:codex:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 13,
+                "sourceItemId": "turn-item:provider:codex:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              }
+            ]
+          },
+          "snapshotSequence": 106
+        }
+      ]
+    },
+    {
+      "step": 34,
+      "op": "interrupt",
+      "as": "after",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    },
+    {
+      "step": 35,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": [
+            "<workspace>"
+          ],
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": "<ignored>",
+            "threads": "<ignored>"
+          }
+        }
+      ]
+    },
+    {
+      "step": 36,
+      "op": "interrupt",
+      "as": "shell",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    }
+  ]
+}

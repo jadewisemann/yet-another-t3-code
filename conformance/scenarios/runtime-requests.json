@@ -1,0 +1,541 @@
+{
+  "description": "Approval and user-input requests, as codex sends them in approval-required mode: the fake codex asks before running a command when the text starts with \"approve\", and asks a question when it starts with \"ask\". Each request becomes a waiting turn item and a pending runtime request that the shell shows; runtime-request.respond resolves it and the answer goes back to codex (the reply echoes the decision). A declined command ends cancelled.",
+  "tier": "p2",
+  "steps": [
+    {
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {},
+      "aside": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": "$present"
+        }
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create",
+        "createdBy": "user",
+        "creationSource": "web",
+        "commandId": "${uuid:cmd-create}",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "First thread",
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "approval-required",
+        "interactionMode": "default",
+        "branch": null,
+        "worktreePath": null
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "approve",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-approve}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:cmd-approve}",
+        "text": "approve this",
+        "attachments": [],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "command_execution",
+            "status": "running"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "approval_request",
+            "status": "waiting"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "runtime-request.updated",
+          "payload": {
+            "status": "pending"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "capture": {
+        "request1": "event.payload.id"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "pendingRuntimeRequest": {
+            "kind": "command"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "call",
+      "as": "accept",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "runtime-request.respond",
+        "commandId": "${uuid:cmd-accept}",
+        "threadId": "${uuid:thread}",
+        "requestId": "${var:request1}",
+        "decision": "accept"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "runtime-request.updated",
+          "payload": {
+            "status": "resolved"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "approval_request",
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "command_execution",
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "ordinal": 1,
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "op": "call",
+      "as": "again",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-again}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:cmd-again}",
+        "text": "approve again",
+        "attachments": [],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "runtime-request.updated",
+          "payload": {
+            "status": "pending"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "capture": {
+        "request2": "event.payload.id"
+      }
+    },
+    {
+      "op": "call",
+      "as": "decline",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "runtime-request.respond",
+        "commandId": "${uuid:cmd-decline}",
+        "threadId": "${uuid:thread}",
+        "requestId": "${var:request2}",
+        "decision": "decline"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "approval_request",
+            "status": "cancelled"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "command_execution",
+            "status": "cancelled"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "ordinal": 2,
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "op": "call",
+      "as": "ask",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-ask}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:cmd-ask}",
+        "text": "ask a question",
+        "attachments": [],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "user_input_request",
+            "status": "waiting"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "runtime-request.updated",
+          "payload": {
+            "status": "pending"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "capture": {
+        "request3": "event.payload.id"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "pendingRuntimeRequest": {
+            "kind": "user_input"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "call",
+      "as": "answer",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "runtime-request.respond",
+        "commandId": "${uuid:cmd-answer}",
+        "threadId": "${uuid:thread}",
+        "requestId": "${var:request3}",
+        "answers": {
+          "color": "Red"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "turn-item.updated",
+          "payload": {
+            "type": "user_input_request",
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "message.updated",
+          "payload": {
+            "role": "assistant",
+            "streaming": false
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "ordinal": 3,
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ],
+      "timeoutMs": 10000
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    },
+    {
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "after",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "interrupt",
+      "stream": "after"
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "threads"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    }
+  ]
+}

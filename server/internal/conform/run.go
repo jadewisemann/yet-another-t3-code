@@ -206,6 +206,11 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 			if err != nil {
 				return fail(err)
 			}
+			if len(got) > 0 {
+				if err := capture(vars, st.Capture, got[len(got)-1]); err != nil {
+					return fail(err)
+				}
+			}
 			if st.Record == "match" {
 				got = got[len(got)-1:]
 			}
@@ -390,7 +395,8 @@ func shape(n *Normalizer, raw []byte, mode string) any {
 	}
 }
 
-// capture stores fields of a JSON object as variables.
+// capture stores string fields of a JSON object as variables. A field
+// may be a dotted path such as "event.payload.requestId".
 func capture(v *Vars, fields map[string]string, raw []byte) error {
 	if len(fields) == 0 {
 		return nil
@@ -400,7 +406,12 @@ func capture(v *Vars, fields map[string]string, raw []byte) error {
 		return fmt.Errorf("capturing from a result that is not a JSON object: %s", truncate(string(raw), 200))
 	}
 	for name, field := range fields {
-		val, ok := m[field].(string)
+		var cur any = m
+		for _, part := range strings.Split(field, ".") {
+			obj, _ := cur.(map[string]any)
+			cur = obj[part]
+		}
+		val, ok := cur.(string)
 		if !ok {
 			return fmt.Errorf("result has no string field %q to capture: %s", field, truncate(string(raw), 200))
 		}

@@ -65,8 +65,9 @@ type Step struct {
 	// cli: arguments after the binary, expanded. Every cli call gets
 	// `--base-dir <base>` appended.
 	Args []string `json:"args,omitempty"`
-	// Capture stores top-level string fields of a JSON result (cli stdout,
-	// http body, or call success value) as `${var:<name>}`: {"name": "field"}.
+	// Capture stores string fields of a JSON result (cli stdout, http
+	// body, call success value, or the value an await matched) as
+	// `${var:<name>}`: {"name": "field"}, where field may be a dotted path.
 	Capture map[string]string `json:"capture,omitempty"`
 
 	// file: path relative to the data directory.
