@@ -156,6 +156,7 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 								}
 							}
 							s.values = append(s.values, f.Values...)
+							trace(method, f.Values)
 						} else if f.Tag == wire.TagExit {
 							s.exit = f.Exit
 						}
@@ -477,4 +478,20 @@ func defaultStr(s, d string) string {
 		return d
 	}
 	return s
+}
+
+// trace appends stream values to $T3CONFORM_TRACE, for writing scenarios.
+func trace(method string, values []json.RawMessage) {
+	path := os.Getenv("T3CONFORM_TRACE")
+	if path == "" {
+		return
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	for _, v := range values {
+		fmt.Fprintf(f, "%s\t%s\n", method, v)
+	}
 }
