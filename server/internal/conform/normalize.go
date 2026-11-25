@@ -10,7 +10,10 @@ import (
 
 var (
 	uuidRe = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
-	timeRe = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})`)
+	// Checkpoint refs embed base64url(hex(sha256(scopeId))[:32]); the scope id
+	// contains the thread id, which is fresh per run.
+	checkpointRefRe = regexp.MustCompile(`(refs/t3/orchestration-v2/checkpoints/)[A-Za-z0-9_-]+(/ordinal/)`)
+	timeRe          = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})`)
 )
 
 // volatileFields are fields whose value depends on the run, not on the
@@ -18,9 +21,9 @@ var (
 var volatileFields = map[string]bool{
 	"traceId":    true, // random trace id in auth errors
 	"expires_in": true, // seconds left, which ticks during the run
-	"fiberId": true, // Effect fiber ids in Interrupt causes
-	"pid":     true,
-	"port":    true, // a free port picked per run
+	"fiberId":    true, // Effect fiber ids in Interrupt causes
+	"pid":        true,
+	"port":       true, // a free port picked per run
 }
 
 // Normalizer replaces values that differ between runs (ids, times, paths)
@@ -92,6 +95,7 @@ func (n *Normalizer) str(s string) string {
 		}
 	}
 	s = timeRe.ReplaceAllString(s, "<time>")
+	s = checkpointRefRe.ReplaceAllString(s, "${1}<scope-key>${2}")
 	s = uuidRe.ReplaceAllStringFunc(s, func(u string) string {
 		u = strings.ToLower(u)
 		if p, ok := n.uuids[u]; ok {

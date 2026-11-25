@@ -56,7 +56,9 @@ func Start(ctx context.Context, bin, root string) (*Target, error) {
 	t.cmd.Dir = ws
 	t.cmd.Stdout = t.Log
 	t.cmd.Stderr = t.Log
-	t.cmd.Env = append(os.Environ(), "NO_COLOR=1", "T3CODE_DISABLE_TELEMETRY=1")
+	t.cmd.Env = append(os.Environ(), "NO_COLOR=1", "T3CODE_DISABLE_TELEMETRY=1",
+		"FAKE_CODEX_LOG="+filepath.Join(root, "fake-codex.log"),
+		"CODEX_HOME="+filepath.Join(root, "codex-home"))
 	t.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := t.cmd.Start(); err != nil {
 		return nil, err

@@ -42,3 +42,13 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 자리 표시자: `${workspace}`(작업 폴더), `${base}`(데이터 폴더), `${uuid:이름}`(이름별로 고정되는 새 UUID), `${id:이름}`, `${now}`, `${origin}`, `${port}`, `${var:이름}`. 기록할 때는 이 값들이 다시 `<workspace>`, `<uuid:이름>` 같은 표시로 바뀌고, 그 밖의 UUID는 처음 나온 순서대로 `<uuid#1>`, 시각은 `<time>`이 됩니다.
 
 `await` 사이에 오는 값의 묶음 단위(`Chunk` 경계)는 기록하지 않습니다. 실행 타이밍에 따라 달라지기 때문입니다.
+
+## 프로바이더 픽스처
+
+러너는 `conformance/fixtures/bin`을 `PATH` 맨 앞에 넣고 서버를 띄웁니다. 그래서 서버가 찾는 `codex`는 실제 CLI가 아니라 `fixtures/fake-codex.mjs`(Node)입니다. 이 가짜 codex는 `codex app-server`의 JSON-RPC를 말하고, 응답과 알림은 `spec/generated/codex.json`을 만족하는 최소값에 필요한 필드만 덮어써서 만듭니다. `turn/start`를 받으면 `fake codex reply to: <입력>`이라는 답을 한 번에 보내고 턴을 끝냅니다. 실행마다 같은 결과가 나오므로 업스트림에서 기록한 골든을 그대로 비교할 수 있습니다.
+
+- 실행 폴더의 `fake-codex.log`에 주고받은 메시지가 모두 남습니다(`-keep`으로 폴더를 남겨 확인합니다).
+- `T3CONFORM_TRACE=<파일>`을 지정하면 러너가 받은 스트림 값을 모두 그 파일에 적습니다. 새 시나리오를 작성할 때 씁니다.
+- `codex exec`(제목 생성)와 `codex mcp list`는 지원하지 않고 종료 코드 2로 끝납니다. 업스트림은 이 실패를 경고로만 남깁니다.
+
+체크포인트 ref(`refs/t3/orchestration-v2/checkpoints/<키>/ordinal/<n>`)의 키는 `base64url(hex(sha256(scopeId))[:32])`이고 scopeId에 스레드 id가 들어가므로, 기록할 때는 `<scope-key>`로 바뀝니다.

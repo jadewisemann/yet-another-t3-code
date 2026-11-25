@@ -1,3 +1,4 @@
 # Scenarios yatt-server is known to fail. CI fails when a scenario that is not
 # listed here fails, and also when a listed one starts passing (so this list
 # only shrinks). One scenario name per line, then the phase that fixes it.
+message-dispatch    P2 (codex provider)

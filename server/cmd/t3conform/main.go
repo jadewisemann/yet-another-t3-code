@@ -45,6 +45,9 @@ func main() {
 		fatal(err)
 	}
 	bin, _ = filepath.Abs(bin)
+	// Providers resolve their CLIs on PATH; the fixtures stand in for them so
+	// that no scenario reaches a real model.
+	os.Setenv("PATH", filepath.Join(root, "conformance/fixtures/bin")+string(os.PathListSeparator)+os.Getenv("PATH"))
 	sp, err := spec.Load(*specPath)
 	if err != nil {
 		fatal(err)
