@@ -42,6 +42,10 @@ type Thread struct {
 	UpdatedAt       string          `json:"updatedAt"`
 	ArchivedAt      *string         `json:"archivedAt,omitempty"`
 	LastVisitedAt   *string         `json:"lastVisitedAt,omitempty"`
+
+	// Not part of the thread.created data: derived from later events.
+	ActiveProviderThreadID *string     `json:"-"`
+	Proj                   *Projection `json:"-"`
 }
 
 type ThreadMetadata struct {
@@ -49,7 +53,9 @@ type ThreadMetadata struct {
 	Title        *string `json:"title,omitempty"`
 	Branch       *string `json:"branch,omitempty"`
 	WorktreePath *string `json:"worktreePath,omitempty"`
-	At           string  `json:"at"`
+	// Sending a message also marks the thread visited.
+	LastVisitedAt *string `json:"lastVisitedAt,omitempty"`
+	At            string  `json:"at"`
 }
 
 type ThreadRef struct {
@@ -84,7 +90,24 @@ func (s *State) clone() *State {
 	return c
 }
 
+// trialApply applies e to a clone made for checking a batch. Thread
+// projections are shared with the real state, so v2 events are only checked.
+func (s *State) trialApply(e Event) error {
+	if IsV2(e.Type) {
+		env, err := decodeEnvelope(e)
+		if err != nil {
+			return err
+		}
+		_, err = s.thread(env.ThreadID)
+		return err
+	}
+	return s.apply(e)
+}
+
 func (s *State) apply(e Event) error {
+	if IsV2(e.Type) {
+		return s.applyV2(e)
+	}
 	switch e.Type {
 	case ProjectCreated:
 		var p Project
@@ -123,6 +146,9 @@ func (s *State) apply(e Event) error {
 		}
 		if m.WorktreePath != nil {
 			t.WorktreePath = m.WorktreePath
+		}
+		if m.LastVisitedAt != nil {
+			t.LastVisitedAt = m.LastVisitedAt
 		}
 		t.UpdatedAt = m.At
 	case ThreadVisited, ThreadArchived, ThreadUnarchived:

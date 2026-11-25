@@ -132,6 +132,12 @@ func (s *Server) dispatchCommand(ctx context.Context, payload json.RawMessage) (
 	if err := json.Unmarshal(payload, &cmd); err != nil {
 		return nil, err
 	}
+	switch cmd.Type {
+	case "message.dispatch":
+		return s.dispatchMessage(ctx, payload)
+	case "thread.stop":
+		return s.stopThread(ctx, cmd)
+	}
 	now := store.Now()
 	needThread := func(st *store.State) (*store.Thread, error) {
 		t, ok := st.Threads[cmd.ThreadID]
@@ -200,6 +206,26 @@ func (s *Server) dispatchCommand(ctx context.Context, payload json.RawMessage) (
 	return map[string]any{"sequence": e.Sequence}, nil
 }
 
+// stopThread interrupts the thread's running turn. The run then ends as
+// interrupted when codex reports the turn over.
+func (s *Server) stopThread(ctx context.Context, cmd threadCommand) (any, error) {
+	var seq int64
+	var found bool
+	s.store.Read(func(st *store.State, sq int64) {
+		_, found = st.Threads[cmd.ThreadID]
+		seq = sq
+	})
+	if !found {
+		return nil, threadNotFound(cmd)
+	}
+	if stopped, active, err := s.runs.requestStop(ctx, cmd.ThreadID, cmd.CommandID); err != nil {
+		return nil, err
+	} else if active {
+		seq = stopped
+	}
+	return map[string]any{"sequence": seq}, nil
+}
+
 // --- orchestration.subscribeShell (spec/behavior/shell.md) -----------------
 
 type subscribeInput struct {
@@ -227,6 +253,7 @@ func (s *Server) subscribeShell(ctx context.Context, payload json.RawMessage, em
 	// (SHELL-8). Upstream resolves it when a project's first thread appears
 	// and then re-sends the snapshot with the root listed.
 	resolved := map[string]bool{}
+	lastSent := map[string]string{}
 	for {
 		var e store.Event
 		var ok bool
@@ -243,6 +270,16 @@ func (s *Server) subscribeShell(ctx context.Context, payload json.RawMessage, em
 			values = shellValues(st, e, resolved)
 		})
 		for _, v := range values {
+			// Upstream coalesces bursts of events into one thread update; an
+			// update that changes nothing but the sequence is not sent.
+			if m, ok := v.(map[string]any); ok && m["kind"] == "thread.updated" {
+				raw, _ := json.Marshal(m["thread"])
+				id := fmt.Sprint(m["thread"].(map[string]any)["id"])
+				if lastSent[id] == string(raw) {
+					continue
+				}
+				lastSent[id] = string(raw)
+			}
 			if err := emit(v); err != nil {
 				return err
 			}
@@ -287,6 +324,11 @@ func shellValues(st *store.State, e store.Event, resolved map[string]bool) []any
 	case store.ThreadArchived:
 		return []any{map[string]any{"kind": "thread.removed", "location": "active", "sequence": e.Sequence, "threadId": threadID}}
 	}
+	if store.IsV2(e.Type) {
+		if t := st.Threads[threadID]; t != nil && t.ArchivedAt == nil {
+			return []any{map[string]any{"kind": "thread.updated", "location": "active", "sequence": e.Sequence, "thread": renderShellThread(t)}}
+		}
+	}
 	return nil // thread.visited and anything else: no shell value (SHELL-7)
 }
 
@@ -319,14 +361,20 @@ func (s *Server) subscribeThread(ctx context.Context, payload json.RawMessage, e
 			return err
 		}
 	}
-	// Turn and message events arrive with providers (P2).
 	for {
+		var e store.Event
+		var ok bool
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case _, ok := <-events:
+		case e, ok = <-events:
 			if !ok {
 				return errors.New("subscriber fell behind")
+			}
+		}
+		if v := threadStreamValue(e, in.ThreadID); v != nil {
+			if err := emit(v); err != nil {
+				return err
 			}
 		}
 	}
@@ -357,9 +405,6 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 	}
 	if in.WorkspaceStrategy.Type != "root" {
 		return nil, fmt.Errorf("yatt-server does not implement workspace strategy %q yet", in.WorkspaceStrategy.Type)
-	}
-	if len(in.InitialMessage) > 0 && string(in.InitialMessage) != "null" {
-		return nil, errors.New("yatt-server cannot run agents yet, so it cannot launch a thread with a first message (phase P2)")
 	}
 	threadID := ""
 	if in.ThreadID != nil && *in.ThreadID != "" {
@@ -396,6 +441,33 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 	})
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
 		return nil, err
+	}
+	if len(in.InitialMessage) > 0 && string(in.InitialMessage) != "null" && err == nil {
+		var first struct {
+			MessageID   *string         `json:"messageId"`
+			Text        string          `json:"text"`
+			Attachments json.RawMessage `json:"attachments"`
+		}
+		if err := json.Unmarshal(in.InitialMessage, &first); err != nil {
+			return nil, err
+		}
+		messageID := ""
+		if first.MessageID != nil {
+			messageID = *first.MessageID
+		}
+		if messageID == "" {
+			if messageID, err = newUUID(); err != nil {
+				return nil, err
+			}
+		}
+		msg, _ := json.Marshal(map[string]any{
+			"type": "message.dispatch", "commandId": in.CommandID + ":initial-message", "threadId": threadID,
+			"messageId": messageID, "text": first.Text, "attachments": rawOr(first.Attachments, []any{}),
+			"createdBy": "user", "creationSource": source,
+		})
+		if _, err := s.dispatchMessage(ctx, msg); err != nil {
+			return nil, err
+		}
 	}
 	var projection map[string]any
 	s.store.Read(func(st *store.State, _ int64) {

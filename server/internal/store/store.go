@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS events (
   command_id  TEXT UNIQUE,
   type        TEXT NOT NULL,
   data        TEXT NOT NULL,
-  occurred_at TEXT NOT NULL
+  occurred_at TEXT NOT NULL,
+  batch       INTEGER
 );
 `
 
@@ -34,6 +35,9 @@ type Event struct {
 	Type       string
 	Data       json.RawMessage
 	OccurredAt string
+	// Wire is how the thread stream shows the event, from Store.Render at
+	// the moment it was applied. It is not stored.
+	Wire any
 }
 
 // Store owns the log and the projections.
@@ -44,6 +48,10 @@ type Store struct {
 	state *State
 	subs  map[int]chan Event
 	next  int
+
+	// Render, when set, describes each newly applied event for streams,
+	// from the state just after it applied.
+	Render func(st *State, e Event) any
 }
 
 // TimeFormat is how every timestamp is written on the wire.
@@ -61,6 +69,9 @@ func Open(userdata string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
 	}
+	// Logs written before batches existed lack the column; every old event
+	// was its own batch, which a NULL batch reads as.
+	_, _ = db.Exec(`ALTER TABLE events ADD COLUMN batch INTEGER`)
 	s := &Store{db: db, state: newState(), subs: map[int]chan Event{}}
 	rows, err := db.Query(`SELECT sequence, COALESCE(command_id, ''), type, data, occurred_at FROM events ORDER BY sequence`)
 	if err != nil {
@@ -87,42 +98,102 @@ func (s *Store) Close() error { return s.db.Close() }
 // ErrDuplicate is returned when a command id was already recorded.
 var ErrDuplicate = errors.New("command already recorded")
 
+// Draft is an event a command decides to append.
+type Draft struct {
+	Type string
+	Data any
+}
+
 // Decide runs check against the current state and, if it returns an event
 // type and data, appends that event. It all happens under one lock, so the
 // check sees exactly the state the event applies to.
 func (s *Store) Decide(ctx context.Context, commandID string, check func(st *State) (typ string, data any, err error)) (Event, error) {
+	events, err := s.DecideMany(ctx, commandID, func(st *State) ([]Draft, error) {
+		typ, data, err := check(st)
+		if err != nil {
+			return nil, err
+		}
+		return []Draft{{typ, data}}, nil
+	})
+	if len(events) == 0 {
+		return Event{}, err
+	}
+	return events[len(events)-1], err
+}
+
+// DecideMany is Decide for a command that appends several events at once.
+// They are written in one transaction; the command id is recorded on the
+// first. A repeated command returns ErrDuplicate with the sequence of the
+// last event the first attempt wrote.
+func (s *Store) DecideMany(ctx context.Context, commandID string, check func(st *State) ([]Draft, error)) ([]Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if commandID != "" {
-		var seq int64
-		err := s.db.QueryRowContext(ctx, `SELECT sequence FROM events WHERE command_id = ?`, commandID).Scan(&seq)
+		var first int64
+		err := s.db.QueryRowContext(ctx, `SELECT sequence FROM events WHERE command_id = ?`, commandID).Scan(&first)
 		if err == nil {
-			return Event{Sequence: seq, CommandID: commandID}, ErrDuplicate
+			var last int64
+			_ = s.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(sequence), ?) FROM events WHERE sequence >= ? AND batch = ?`, first, first, first).Scan(&last)
+			return []Event{{Sequence: last, CommandID: commandID}}, ErrDuplicate
 		}
 	}
-	typ, data, err := check(s.state)
+	drafts, err := check(s.state)
 	if err != nil {
-		return Event{}, err
+		return nil, err
 	}
-	raw, err := json.Marshal(data)
+	if len(drafts) == 0 {
+		return nil, nil
+	}
+	now := Now()
+	events := make([]Event, len(drafts))
+	for i, d := range drafts {
+		raw, err := json.Marshal(d.Data)
+		if err != nil {
+			return nil, err
+		}
+		events[i] = Event{Sequence: s.seq + int64(i) + 1, Type: d.Type, Data: raw, OccurredAt: now}
+	}
+	events[0].CommandID = commandID
+	// Apply to a copy first so a failing batch leaves nothing behind. The
+	// copy shares thread projections, so v2 events are only checked here.
+	trial := s.state.clone()
+	for _, e := range events {
+		if err := trial.trialApply(e); err != nil {
+			return nil, err
+		}
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return Event{}, err
+		return nil, err
 	}
-	e := Event{Sequence: s.seq + 1, CommandID: commandID, Type: typ, Data: raw, OccurredAt: Now()}
-	// Apply to a copy first so a failing event leaves nothing behind.
-	if err := s.state.clone().apply(e); err != nil {
-		return Event{}, err
+	defer tx.Rollback()
+	for _, e := range events {
+		var cmd any
+		if e.CommandID != "" {
+			cmd = e.CommandID
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO events (sequence, command_id, type, data, occurred_at, batch) VALUES (?, ?, ?, ?, ?, ?)`,
+			e.Sequence, cmd, e.Type, string(e.Data), e.OccurredAt, events[0].Sequence); err != nil {
+			return nil, err
+		}
 	}
-	var cmd any
-	if commandID != "" {
-		cmd = commandID
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO events (sequence, command_id, type, data, occurred_at) VALUES (?, ?, ?, ?, ?)`,
-		e.Sequence, cmd, e.Type, string(raw), e.OccurredAt); err != nil {
-		return Event{}, err
+	for i := range events {
+		_ = s.state.apply(events[i])
+		if s.Render != nil {
+			events[i].Wire = s.Render(s.state, events[i])
+		}
+		s.seq = events[i].Sequence
 	}
-	_ = s.state.apply(e)
-	s.seq = e.Sequence
+	for _, e := range events {
+		s.publish(e)
+	}
+	return events, nil
+}
+
+func (s *Store) publish(e Event) {
 	for id, ch := range s.subs {
 		select {
 		case ch <- e:
@@ -133,7 +204,6 @@ func (s *Store) Decide(ctx context.Context, commandID string, check func(st *Sta
 			delete(s.subs, id)
 		}
 	}
-	return e, nil
 }
 
 // Subscribe calls snapshot with the current state and sequence, and then

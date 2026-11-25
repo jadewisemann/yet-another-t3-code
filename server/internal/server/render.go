@@ -91,7 +91,7 @@ func threadCommon(t *store.Thread) map[string]any {
 		"lastVisitedAt":          ptr(t.LastVisitedAt),
 		"deletedAt":              nil,
 		"forkedFrom":             nil,
-		"activeProviderThreadId": nil,
+		"activeProviderThreadId": ptr(t.ActiveProviderThreadID),
 		"lineage": map[string]any{
 			"parentThreadId": nil, "relationshipToParent": nil, "rootThreadId": t.ID,
 		},
@@ -121,32 +121,143 @@ func renderShellThread(t *store.Thread) map[string]any {
 	} {
 		m[k] = v
 	}
+	summarizeRuns(t, m)
 	return m
+}
+
+// summarizeRuns fills the shell fields derived from the thread's runs,
+// messages and items (spec/behavior/runs.md RUN-6).
+func summarizeRuns(t *store.Thread, m map[string]any) {
+	p := t.Proj
+	if p == nil {
+		return
+	}
+	items := len(p.List("turnItems"))
+	m["itemCount"], m["visibleItemCount"] = items, items
+	history := []any{}
+	seen := map[string]bool{}
+	runs := p.List("runs")
+	for _, r := range runs {
+		if id := r.String("providerInstanceId"); id != "" && !seen[id] {
+			seen[id] = true
+			history = append(history, id)
+		}
+	}
+	m["providerInstanceHistory"] = history
+	latestUser := ""
+	for _, msg := range p.List("messages") {
+		if msg.String("role") == "user" && msg.String("createdAt") > latestUser {
+			latestUser = msg.String("createdAt")
+		}
+	}
+	if latestUser != "" {
+		m["latestUserMessageAt"], m["latestUserAuthoredMessageAt"] = latestUser, latestUser
+	}
+	if len(runs) == 0 {
+		return
+	}
+	r := runs[len(runs)-1]
+	status := r.String("status")
+	m["latestRunId"] = r.ID
+	stopID := "turn-item:run:" + encodeURIComponent(r.ID) + ":signal:interrupt-request"
+	m["latestRunStopRequested"] = p.Get("turnItems", stopID) != nil
+	m["latestRunRequestedAt"] = r.Field("requestedAt")
+	m["latestRunStartedAt"] = r.Field("startedAt")
+	m["latestRunCompletedAt"] = r.Field("completedAt")
+	m["status"] = status
+	if activeRunStatuses[status] {
+		m["activityRunStatus"] = status
+		started := r.Field("startedAt")
+		if started == nil {
+			started = r.Field("requestedAt")
+		}
+		m["activityRunStartedAt"] = started
+		if status != "waiting" {
+			m["activeRunId"] = r.ID
+		}
+	}
 }
 
 // renderThreadProjection is the projection subscribeThread sends first.
 func renderThreadProjection(t *store.Thread) map[string]any {
-	empty := func() []any { return []any{} }
-	return map[string]any{
-		"thread":           threadCommon(t),
-		"attempts":         empty(),
-		"checkpointScopes": empty(),
-		"checkpoints":      empty(),
-		"contextHandoffs":  empty(),
-		"contextTransfers": empty(),
-		"messages":         empty(),
-		"nodes":            empty(),
-		"plans":            empty(),
-		"providerSessions": empty(),
-		"providerThreads":  empty(),
-		"providerTurns":    empty(),
-		"runs":             empty(),
-		"runtimeRequests":  empty(),
-		"subagents":        empty(),
-		"turnItems":        empty(),
-		"visibleTurnItems": empty(),
-		"updatedAt":        t.UpdatedAt,
+	out := map[string]any{
+		"thread":    threadCommon(t),
+		"updatedAt": t.UpdatedAt,
 	}
+	for _, name := range store.Collections {
+		list := []any{}
+		for _, e := range t.Proj.List(name) {
+			list = append(list, e.Payload)
+		}
+		out[name] = list
+	}
+	visible := []any{}
+	for i, e := range t.Proj.List("turnItems") {
+		visible = append(visible, map[string]any{
+			"item": e.Payload, "position": i, "sourceItemId": e.ID,
+			"sourceThreadId": t.ID, "visibility": "local",
+		})
+	}
+	out["visibleTurnItems"] = visible
+	if t.Proj != nil && t.Proj.UpdatedAt != "" {
+		out["updatedAt"] = t.Proj.UpdatedAt
+	}
+	return out
+}
+
+// threadStreamValue is what subscribeThread sends for an event, or nil
+// when the event is not about the thread.
+func threadStreamValue(e store.Event, threadID string) any {
+	w, ok := e.Wire.(threadWire)
+	if !ok || w.threadID != threadID {
+		return nil
+	}
+	return map[string]any{"kind": "event", "sequence": e.Sequence, "event": w.event}
+}
+
+type threadWire struct {
+	threadID string
+	event    any
+}
+
+// renderThreadEvent is the thread stream's view of an event, taken right
+// after it applied so payloads show the thread as of that event.
+func renderThreadEvent(st *store.State, e store.Event) any {
+	if store.IsV2(e.Type) {
+		var env store.Envelope
+		if json.Unmarshal(e.Data, &env) != nil {
+			return nil
+		}
+		return threadWire{env.ThreadID, env}
+	}
+	var ref struct {
+		ThreadID string `json:"threadId"`
+	}
+	_ = json.Unmarshal(e.Data, &ref)
+	threadID := ref.ThreadID
+	t := st.Threads[threadID]
+	if t == nil {
+		return nil
+	}
+	types := map[string]string{
+		store.ThreadMetadataUpdated: "thread.metadata-updated",
+		store.ThreadVisited:         "thread.visited",
+		store.ThreadArchived:        "thread.archived",
+		store.ThreadUnarchived:      "thread.unarchived",
+	}
+	typ, ok := types[e.Type]
+	if !ok {
+		return nil
+	}
+	u, _ := newUUID()
+	id := "event:thread:" + threadID + ":"
+	if e.CommandID != "" {
+		id += "command:" + e.CommandID + ":"
+	}
+	return threadWire{threadID, map[string]any{
+		"id": id + u, "threadId": threadID, "providerInstanceId": providerInstanceID(t),
+		"occurredAt": e.OccurredAt, "type": typ, "payload": threadCommon(t),
+	}}
 }
 
 func shellSnapshot(st *store.State, seq int64, exclude string) map[string]any {
