@@ -165,16 +165,26 @@ func summarizeRuns(t *store.Thread, m map[string]any) {
 	m["latestRunStartedAt"] = r.Field("startedAt")
 	m["latestRunCompletedAt"] = r.Field("completedAt")
 	m["status"] = status
-	if activeRunStatuses[status] {
-		m["activityRunStatus"] = status
-		started := r.Field("startedAt")
-		if started == nil {
-			started = r.Field("requestedAt")
+	// The activity run is the latest run that has started; a queued run
+	// behind it does not count until it starts.
+	for i := len(runs) - 1; i >= 0; i-- {
+		a := runs[i]
+		st := a.String("status")
+		if st == "queued" {
+			continue
 		}
-		m["activityRunStartedAt"] = started
-		if status != "waiting" {
-			m["activeRunId"] = r.ID
+		if activeRunStatuses[st] {
+			m["activityRunStatus"] = st
+			started := a.Field("startedAt")
+			if started == nil {
+				started = a.Field("requestedAt")
+			}
+			m["activityRunStartedAt"] = started
+			if st != "waiting" {
+				m["activeRunId"] = a.ID
+			}
 		}
+		break
 	}
 }
 

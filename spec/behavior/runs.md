@@ -39,8 +39,15 @@
 - RUN-8. 실행 중인 턴에 `thread.stop`을 보내면 서버는 먼저 `turn-item:run:<enc(runId)>:signal:interrupt-request` 항목(`type: "run_interrupt_request"`, `title: "Interrupt requested"`, `message: "Stopped by user"`)을 기록하고, 그 이벤트의 시퀀스로 성공합니다. 그다음 codex에 `turn/interrupt`를 보냅니다. (`thread-stop`)
 - RUN-9. codex가 `turn/completed`(`status: "interrupted"`)를 보내면 provider turn과 attempt가 `interrupted`가 되고, `…:signal:interrupt-result` 항목(`status: "interrupted"`, `title: "Interrupted"`, `parentItemId`는 요청 항목)이 생깁니다. 실행은 `waiting`을 거치지 않고 바로 `interrupted`로 끝나며, 그 뒤에도 체크포인트는 기록됩니다. 마지막 `run.updated`가 `checkpointId`를 채우고, 완료 경로와 달리 root node는 다시 갱신하지 않습니다. 셸 스트림에서는 `latestRunStopRequested`가 `true`가 됩니다. (`thread-stop`)
 
+## 대기열 (`queue_after_active`)
+
+- RUN-10. 실행이 활성 상태(`preparing`, `queued`, `starting`, `running`, `waiting`)일 때 보낸 메시지는 `dispatchMode`가 `queue_after_active`든 `start_immediately`든 대기열에 들어갑니다. 대기 실행은 기존 provider thread를 쓰고, `run.created`(`status: "queued"`, `queuePosition`은 대기 중인 실행들의 위치 최댓값 + 1), `run-attempt.created`, `node.updated`(`pending`), `checkpoint-scope.created`, `message.updated`만 기록합니다. provider thread 이벤트와 사용자 turn item은 아직 없습니다. (`message-queue`)
+- RUN-11. 활성 실행이 체크포인트까지 끝나면, 가장 앞선 대기 실행이 시작됩니다. 오케스트레이터 이벤트로 provider thread가 `not_loaded`(`lastRunOrdinal`은 새 실행, `driver` 없음)가 되고, `inputIntent: "queued_turn"`인 사용자 turn item과 `run.updated`(`starting`, `queuePosition: null`)가 이어집니다. 그다음은 일반 실행과 같습니다. 이미 로드된 codex 스레드에는 `config/read` 한 번 뒤에 `turn/start`만 보냅니다. (`message-queue`)
+- RUN-12. 두 번째 이후의 실행은 provider thread를 새로 만들지 않고, 그 상태(`idle`)를 유지한 채 `lastRunOrdinal`만 올립니다. 실행이 시작될 때 공유 세션은 `provider-session.updated`로 다시 기록되고(내용은 그대로), `checkpoint-scope.created`는 실행마다 새 `runId`로 다시 기록됩니다. 스레드의 `lastVisitedAt`은 첫 메시지에서만 기록됩니다. (`message-queue`)
+- RUN-13. 셸 요약의 `status`와 `latestRun*`은 가장 최근 실행(대기 실행 포함)을 따르고, `activityRun*`과 `activeRunId`는 대기 실행을 건너뛴 가장 최근의 시작된 실행을 따릅니다. 스냅샷의 `messages`는 그 메시지를 가리키는 turn item의 가장 작은 `ordinal` 순서이고, turn item이 없는 메시지(대기 중인 메시지)는 맨 뒤에 놓입니다. (`message-queue`)
+
 ## yatt-server 구현 메모
 
 - v2 이벤트(`run.*`, `node.updated`, `message.updated` 등)는 업스트림이 스레드 스트림에 보내는 봉투 그대로 저장하고, 업스트림의 `applyToProjection`처럼 id 기준 upsert로 접습니다(`server/internal/store/v2.go`). 스냅샷의 목록 순서는 업스트림 스냅샷 쿼리의 `ORDER BY`를 따릅니다.
 - codex 프로세스는 프로바이더 인스턴스마다 하나를 공유합니다(`provider-session:provider-instance:codex:shared`). 실행 파일은 `PATH`의 `codex`이고, `YATT_CODEX_BIN`으로 바꿀 수 있습니다.
-- 아직 다루지 않는 것: 실행 중에 보낸 메시지의 대기열(`queue_after_active`는 오류로 거절), 승인 요청과 사용자 입력 요청(codex의 서버 요청은 오류로 응답), 명령 실행과 파일 변경 같은 에이전트 메시지 이외의 항목, 체크포인트의 `files` 목록, T3 MCP 도구와 추가 지시문(`additionalContext`).
+- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 승인 요청과 사용자 입력 요청(codex의 서버 요청은 오류로 응답), 명령 실행과 파일 변경 같은 에이전트 메시지 이외의 항목, 체크포인트의 `files` 목록, T3 MCP 도구와 추가 지시문(`additionalContext`).

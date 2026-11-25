@@ -45,7 +45,7 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 
 ## 프로바이더 픽스처
 
-러너는 `conformance/fixtures/bin`을 `PATH` 맨 앞에 넣고 서버를 띄웁니다. 그래서 서버가 찾는 `codex`는 실제 CLI가 아니라 `fixtures/fake-codex.mjs`(Node)입니다. 이 가짜 codex는 `codex app-server`의 JSON-RPC를 말하고, 응답과 알림은 `spec/generated/codex.json`을 만족하는 최소값에 필요한 필드만 덮어써서 만듭니다. `turn/start`를 받으면 `fake codex reply to: <입력>`이라는 답을 한 번에 보내고 턴을 끝냅니다. 입력이 `wait`로 시작하면 턴을 시작만 하고, `turn/interrupt`를 받을 때 `interrupted`로 끝냅니다(중지 시나리오용). 실행마다 같은 결과가 나오므로 업스트림에서 기록한 골든을 그대로 비교할 수 있습니다.
+러너는 `conformance/fixtures/bin`을 `PATH` 맨 앞에 넣고 서버를 띄웁니다. 그래서 서버가 찾는 `codex`는 실제 CLI가 아니라 `fixtures/fake-codex.mjs`(Node)입니다. 이 가짜 codex는 `codex app-server`의 JSON-RPC를 말하고, 응답과 알림은 `spec/generated/codex.json`을 만족하는 최소값에 필요한 필드만 덮어써서 만듭니다. `turn/start`를 받으면 `fake codex reply to: <입력>`이라는 답을 한 번에 보내고 턴을 끝냅니다. 입력이 `wait`로 시작하면 턴을 시작만 하고, `turn/interrupt`를 받을 때 `interrupted`로 끝냅니다(중지 시나리오용). 입력이 `slow`로 시작하면 1초 뒤에 턴을 끝냅니다(대기열 시나리오용). 실행마다 같은 결과가 나오므로 업스트림에서 기록한 골든을 그대로 비교할 수 있습니다.
 
 - 실행 폴더의 `fake-codex.log`에 주고받은 메시지가 모두 남습니다(`-keep`으로 폴더를 남겨 확인합니다).
 - `T3CONFORM_TRACE=<파일>`을 지정하면 러너가 받은 스트림 값을 모두 그 파일에 적습니다. 새 시나리오를 작성할 때 씁니다.

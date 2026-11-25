@@ -133,7 +133,8 @@ type runState struct {
 	providerTurn  string
 	turnStarted   string
 	itemOrdinal   int
-	hasSession    bool
+	session       *store.Entity // the shared provider session, when it exists
+	queuePosition int           // the run's place in the queue, while it waits
 	ptCreatedAt   string
 	ptFirstRun    int
 	baseline      *checkpointInfo // the scope's first checkpoint, when this run makes it
@@ -162,7 +163,7 @@ func (r *runState) runPayload(status string, completedAt any, checkpointID any) 
 		"providerInstanceId": r.instance, "modelSelection": r.modelSel,
 		"providerThreadId": r.ids.providerThread, "userMessageId": r.userMessageID,
 		"rootNodeId": r.ids.root, "activeAttemptId": r.ids.attempt, "status": status,
-		"queuePosition": nil, "requestedAt": r.requestedAt, "startedAt": started,
+		"queuePosition": nilIfZero(r.queuePosition), "requestedAt": r.requestedAt, "startedAt": started,
 		"completedAt": completedAt, "checkpointId": checkpointID, "contextHandoffId": nil,
 	}
 }
@@ -231,6 +232,13 @@ func (r *runState) currentTurn() string {
 	return r.providerTurn
 }
 
+func nilIfZero(n int) any {
+	if n == 0 {
+		return nil
+	}
+	return n
+}
+
 func nilIfEmpty(s string) any {
 	if s == "" {
 		return nil
@@ -263,6 +271,66 @@ func latestRun(t *store.Thread) *store.Entity {
 
 var activeRunStatuses = map[string]bool{"preparing": true, "queued": true, "starting": true, "running": true, "waiting": true}
 
+// newRunState prepares a run of thread t from the projection as it stands:
+// the run reuses the thread's codex provider thread, when it has one, and
+// its checkpoint follows the scope's latest checkpoint.
+func (s *Server) newRunState(st *store.State, t *store.Thread, ordinal int, messageID, text, requestedAt string, modelSel json.RawMessage) (*runState, *store.Entity) {
+	instance, _ := providerInstanceID(t).(string)
+	var sel struct {
+		Model string `json:"model"`
+	}
+	_ = json.Unmarshal(modelSel, &sel)
+	cwd := ""
+	if p := st.Projects[t.ProjectID]; p != nil {
+		cwd = p.WorkspaceRoot
+	}
+	if t.WorktreePath != nil {
+		cwd = *t.WorktreePath
+	}
+	existingPT := ""
+	var pt *store.Entity
+	for _, e := range t.Proj.List("providerThreads") {
+		if e.String("appThreadId") == t.ID && e.String("driver") == "codex" {
+			pt, existingPT = e, e.ID
+		}
+	}
+	r := &runState{
+		srv: s, ids: newRunIDs(t.ID, instance, ordinal, existingPT), instance: instance,
+		model: sel.Model, modelSel: modelSel, cwd: cwd, title: t.Title, text: text,
+		userMessageID: messageID, requestedAt: requestedAt, ptCreatedAt: requestedAt, ptFirstRun: ordinal,
+		stop: make(chan struct{}),
+	}
+	r.session = t.Proj.Get("providerSessions", r.ids.session)
+	if pt != nil {
+		r.ptCreatedAt = pt.String("createdAt")
+		r.ptFirstRun = int(pt.Number("firstRunOrdinal"))
+		if ref, ok := pt.Field("nativeThreadRef").(map[string]any); ok {
+			r.nativeThread, _ = ref["nativeId"].(string)
+		}
+	}
+	ckpts := 0
+	for _, c := range t.Proj.List("checkpoints") {
+		if c.String("scopeId") == r.ids.scope {
+			ckpts++
+			r.parent = c.ID
+		}
+	}
+	r.nextCkpt = ckpts
+	return r, pt
+}
+
+// userTurnItem is the turn item of the user message that starts run r.
+func (r *runState) userTurnItem(createdBy, source, intent string, attachments json.RawMessage, at string) map[string]any {
+	return map[string]any{
+		"id": "turn-item:message:" + r.userMessageID, "threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
+		"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
+		"parentItemId": nil, "ordinal": r.nextItemOrdinal(), "status": "completed", "title": nil,
+		"startedAt": at, "completedAt": at, "updatedAt": at, "createdBy": createdBy,
+		"creationSource": source, "type": "user_message", "messageId": r.userMessageID,
+		"inputIntent": intent, "text": r.text, "attachments": attachments,
+	}
+}
+
 func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (any, error) {
 	var cmd messageCommand
 	if err := json.Unmarshal(payload, &cmd); err != nil {
@@ -275,96 +343,86 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 		if !ok {
 			return nil, threadNotFound(tc)
 		}
-		if run := latestRun(t); run != nil && activeRunStatuses[run.String("status")] {
-			return nil, dispatchError(tc, "yatt-server cannot queue a message behind a running turn yet: "+cmd.ThreadID)
-		}
 		instance, _ := providerInstanceID(t).(string)
 		if instance != "codex" {
 			return nil, dispatchError(tc, fmt.Sprintf("yatt-server does not run provider %q yet", instance))
 		}
-		var sel struct {
-			Model string `json:"model"`
-		}
-		_ = json.Unmarshal(t.ModelSelection, &sel)
-		cwd := ""
-		if p := st.Projects[t.ProjectID]; p != nil {
-			cwd = p.WorkspaceRoot
-		}
-		if t.WorktreePath != nil {
-			cwd = *t.WorktreePath
-		}
-		ordinal := len(t.Proj.List("runs")) + 1
-		existingPT := ""
-		var pt *store.Entity
-		for _, e := range t.Proj.List("providerThreads") {
-			if e.String("appThreadId") == t.ID && e.String("driver") == "codex" {
-				pt, existingPT = e, e.ID
+		// A message sent while a run is active waits behind it (RUN-10),
+		// whether it asked to queue or to start at once.
+		queued := false
+		queuePosition := 0
+		for _, run := range t.Proj.List("runs") {
+			if activeRunStatuses[run.String("status")] {
+				queued = true
+			}
+			if run.String("status") == "queued" {
+				pos := int(run.Number("queuePosition"))
+				if run.Field("queuePosition") == nil {
+					pos = int(run.Number("ordinal"))
+				}
+				queuePosition = max(queuePosition, pos)
 			}
 		}
 		now := store.Now()
-		r = &runState{
-			srv: s, ids: newRunIDs(t.ID, instance, ordinal, existingPT), instance: instance,
-			model: sel.Model, modelSel: t.ModelSelection, cwd: cwd, title: t.Title, text: cmd.Text,
-			userMessageID: cmd.MessageID, requestedAt: now, ptCreatedAt: now, ptFirstRun: ordinal,
-			hasSession: t.Proj.Get("providerSessions", "provider-session:provider-instance:"+instance+":shared") != nil,
-			stop:       make(chan struct{}),
+		ordinal := len(t.Proj.List("runs")) + 1
+		var pt *store.Entity
+		r, pt = s.newRunState(st, t, ordinal, cmd.MessageID, cmd.Text, now, t.ModelSelection)
+		if queued && pt == nil {
+			return nil, dispatchError(tc, "the active run has no provider thread to queue behind: "+cmd.ThreadID)
 		}
-		if pt != nil {
-			r.ptCreatedAt = pt.String("createdAt")
-			r.ptFirstRun = int(pt.Number("firstRunOrdinal"))
-			if ref, ok := pt.Field("nativeThreadRef").(map[string]any); ok {
-				r.nativeThread, _ = ref["nativeId"].(string)
-			}
-		}
-		ckpts := 0
-		for _, c := range t.Proj.List("checkpoints") {
-			if c.String("scopeId") == r.ids.scope {
-				ckpts++
-				r.parent = c.ID
-			}
-		}
-		r.nextCkpt = ckpts
 		createdBy, source := cmd.CreatedBy, cmd.CreationSource
 		attachments := cmd.Attachments
 		if len(attachments) == 0 {
 			attachments = json.RawMessage("[]")
 		}
 		cause := "command:" + cmd.CommandID
-		visited := now
-		threadDraft := store.Draft{Type: store.ThreadMetadataUpdated, Data: store.ThreadMetadata{ThreadID: t.ID, LastVisitedAt: &visited, At: now}}
-		evs := []event{
-			{cause: cause, typ: "provider-thread.updated", driver: "codex", payload: r.providerThread("not_loaded")},
-			{cause: cause, typ: "run.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload("starting", nil, nil)},
-			{cause: cause, typ: "run-attempt.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload("pending", nil)},
-			{cause: cause, typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("pending", nil)},
+		var evs []event
+		if queued {
+			r.queuePosition = queuePosition + 1
+		} else {
+			ptStatus := "not_loaded"
+			if pt != nil {
+				ptStatus = pt.String("status")
+			}
+			evs = append(evs, event{cause: cause, typ: "provider-thread.updated", driver: "codex", payload: r.providerThread(ptStatus)})
 		}
-		if t.Proj.Get("checkpointScopes", r.ids.scope) == nil {
-			evs = append(evs, event{cause: cause, typ: "checkpoint-scope.created", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
-				"id": r.ids.scope, "threadId": t.ID, "runId": r.ids.run, "nodeId": r.ids.root, "parentScopeId": nil,
-				"providerThreadId": r.ids.providerThread, "kind": "root_run", "ordinalWithinParent": 0,
-				"advancesAppRunCount": true, "cwd": cwd, "createdAt": now,
-			}})
+		status := "starting"
+		if queued {
+			status = "queued"
 		}
 		evs = append(evs,
+			event{cause: cause, typ: "run.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload(status, nil, nil)},
+			event{cause: cause, typ: "run-attempt.created", runID: r.ids.run, nodeID: r.ids.root, payload: r.attemptPayload("pending", nil)},
+			event{cause: cause, typ: "node.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.rootNode("pending", nil)},
+			event{cause: cause, typ: "checkpoint-scope.created", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
+				"id": r.ids.scope, "threadId": t.ID, "runId": r.ids.run, "nodeId": r.ids.root, "parentScopeId": nil,
+				"providerThreadId": r.ids.providerThread, "kind": "root_run", "ordinalWithinParent": 0,
+				"advancesAppRunCount": true, "cwd": r.cwd, "createdAt": now,
+			}},
 			event{cause: cause, typ: "message.updated", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
 				"createdBy": createdBy, "creationSource": source, "id": cmd.MessageID, "threadId": t.ID,
 				"runId": r.ids.run, "nodeId": r.ids.root, "role": "user", "text": cmd.Text,
 				"attachments": attachments, "streaming": false, "createdAt": now, "updatedAt": now,
 			}},
-			event{cause: cause, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, payload: map[string]any{
-				"id": "turn-item:message:" + cmd.MessageID, "threadId": t.ID, "runId": r.ids.run, "nodeId": r.ids.root,
-				"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
-				"parentItemId": nil, "ordinal": r.nextItemOrdinal(), "status": "completed", "title": nil,
-				"startedAt": now, "completedAt": now, "updatedAt": now, "createdBy": createdBy,
-				"creationSource": source, "type": "user_message", "messageId": cmd.MessageID,
-				"inputIntent": "turn_start", "text": cmd.Text, "attachments": attachments,
-			}},
 		)
+		if !queued {
+			evs = append(evs, event{cause: cause, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root,
+				payload: r.userTurnItem(createdBy, source, "turn_start", attachments, now)})
+		}
 		drafts, err := r.drafts(evs...)
 		if err != nil {
 			return nil, err
 		}
-		return append([]store.Draft{threadDraft}, drafts...), nil
+		if queued {
+			r = nil
+		}
+		// The thread's first message marks it visited.
+		if !queued && t.LastVisitedAt == nil {
+			visited := now
+			threadDraft := store.Draft{Type: store.ThreadMetadataUpdated, Data: store.ThreadMetadata{ThreadID: t.ID, LastVisitedAt: &visited, At: now}}
+			drafts = append([]store.Draft{threadDraft}, drafts...)
+		}
+		return drafts, nil
 	})
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
 		return nil, err
@@ -373,6 +431,60 @@ func (s *Server) dispatchMessage(ctx context.Context, payload json.RawMessage) (
 		s.runs.start(r)
 	}
 	return map[string]any{"sequence": events[len(events)-1].Sequence}, nil
+}
+
+// promoteQueued starts the thread's next queued run, if it has one, once
+// no run is active (RUN-10).
+func (rn *runner) promoteQueued(ctx context.Context, threadID string) error {
+	var r *runState
+	_, err := rn.srv.store.DecideMany(ctx, "", func(st *store.State) ([]store.Draft, error) {
+		t, ok := st.Threads[threadID]
+		if !ok {
+			return nil, nil
+		}
+		var next *store.Entity
+		position := func(e *store.Entity) int {
+			if e.Field("queuePosition") == nil {
+				return int(e.Number("ordinal"))
+			}
+			return int(e.Number("queuePosition"))
+		}
+		for _, run := range t.Proj.List("runs") {
+			switch run.String("status") {
+			case "queued":
+				if next == nil || position(run) < position(next) {
+					next = run
+				}
+			case "preparing", "starting", "running", "waiting":
+				return nil, nil
+			}
+		}
+		if next == nil {
+			return nil, nil
+		}
+		msg := t.Proj.Get("messages", next.String("userMessageId"))
+		if msg == nil {
+			return nil, fmt.Errorf("queued run %s has no message", next.ID)
+		}
+		modelSel, _ := json.Marshal(next.Field("modelSelection"))
+		r, _ = rn.srv.newRunState(st, t, int(next.Number("ordinal")), msg.ID, msg.String("text"), next.String("requestedAt"), modelSel)
+		attachments, _ := json.Marshal(msg.Field("attachments"))
+		now := store.Now()
+		return r.drafts(
+			event{typ: "provider-thread.updated", payload: r.providerThread("not_loaded")},
+			event{typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root,
+				payload: r.userTurnItem(msg.String("createdBy"), msg.String("creationSource"), "queued_turn", attachments, now)},
+			event{typ: "run.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload("starting", nil, nil)},
+		)
+	})
+	if err != nil {
+		r = nil
+		return err
+	}
+	if r != nil {
+		rn.start(r)
+	}
+	return nil
 }
 
 // --- the run goroutine ----------------------------------------------------------
@@ -395,16 +507,17 @@ func (rn *runner) start(r *runState) {
 	rn.active[r.ids.thread] = r
 	rn.mu.Unlock()
 	go func() {
-		defer func() {
-			rn.mu.Lock()
-			if rn.active[r.ids.thread] == r {
-				delete(rn.active, r.ids.thread)
-			}
-			rn.mu.Unlock()
-		}()
 		if err := rn.run(r); err != nil {
 			rn.srv.log.Warn("run failed", slog.String("run", r.ids.run), slog.String("error", err.Error()))
 			rn.fail(r, err)
+		}
+		rn.mu.Lock()
+		if rn.active[r.ids.thread] == r {
+			delete(rn.active, r.ids.thread)
+		}
+		rn.mu.Unlock()
+		if err := rn.promoteQueued(context.Background(), r.ids.thread); err != nil {
+			rn.srv.log.Warn("queued run did not start", slog.String("thread", r.ids.thread), slog.String("error", err.Error()))
 		}
 	}()
 }
@@ -492,7 +605,7 @@ func (rn *runner) run(r *runState) error {
 		return err
 	}
 	sessionCause := "provider-session:" + encodeURIComponent(r.ids.session)
-	if !r.hasSession {
+	if r.session == nil {
 		now := store.Now()
 		session := func() map[string]any {
 			return map[string]any{
@@ -507,14 +620,16 @@ func (rn *runner) run(r *runState) error {
 		); err != nil {
 			return err
 		}
-	}
-	if _, err := c.Call(ctx, "config/read", map[string]any{"cwd": r.cwd, "includeLayers": false}); err != nil {
+	} else if err := r.append(ctx, event{cause: sessionCause, typ: "provider-session.updated", driver: "codex", payload: r.session.Payload}); err != nil {
 		return err
 	}
 	rn.mu.Lock()
 	loaded := r.nativeThread != "" && rn.loaded[r.nativeThread]
 	rn.mu.Unlock()
 	if !loaded {
+		if _, err := c.Call(ctx, "config/read", map[string]any{"cwd": r.cwd, "includeLayers": false}); err != nil {
+			return err
+		}
 		params := map[string]any{
 			"cwd": r.cwd, "model": r.model,
 			"config": map[string]any{"shell_environment_policy.set.T3CODE_THREAD_ID": r.ids.thread},
@@ -835,11 +950,6 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 			"ref": ref, "status": status, "files": []any{}, "capturedAt": at,
 		}
 	}
-	// Upstream tags the checkpoint item with the driver only on this path.
-	checkpointItemDriver := ""
-	if interrupted {
-		checkpointItemDriver = "codex"
-	}
 	var evs []event
 	if b := r.baseline; b != nil {
 		evs = append(evs, event{cause: effect, typ: "checkpoint.captured", nodeID: r.ids.root, driver: "codex",
@@ -848,7 +958,7 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 	evs = append(evs,
 		event{cause: effect, typ: "checkpoint.captured", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
 			payload: checkpoint(ordinal, r.ids.run, r.parent, r.ids.ordinal, ref, status, at)},
-		event{cause: effect, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, driver: checkpointItemDriver, payload: map[string]any{
+		event{cause: effect, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex", payload: map[string]any{
 			"id":       "turn-item:provider:codex:native-item:" + encodeURIComponent("checkpoint:"+ckptID),
 			"threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
 			"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
