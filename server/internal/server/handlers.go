@@ -394,17 +394,17 @@ func (s *Server) subscribeThread(ctx context.Context, payload json.RawMessage, e
 // --- orchestration.launchThread (spec/behavior/threads.md THREAD-6) ---------
 
 type launchInput struct {
-	CommandID         string          `json:"commandId"`
-	CreationSource    *string         `json:"creationSource"`
-	ThreadID          *string         `json:"threadId"`
-	ProjectID         string          `json:"projectId"`
-	Title             string          `json:"title"`
-	ModelSelection    json.RawMessage `json:"modelSelection"`
-	RuntimeMode       string          `json:"runtimeMode"`
-	InteractionMode   string          `json:"interactionMode"`
+	CommandID         string            `json:"commandId"`
+	CreationSource    *string           `json:"creationSource"`
+	ThreadID          *string           `json:"threadId"`
+	ProjectID         string            `json:"projectId"`
+	Title             string            `json:"title"`
+	ModelSelection    json.RawMessage   `json:"modelSelection"`
+	RuntimeMode       string            `json:"runtimeMode"`
+	InteractionMode   string            `json:"interactionMode"`
 	WorkspaceStrategy workspaceStrategy `json:"workspaceStrategy"`
-	InitialMessage json.RawMessage `json:"initialMessage"`
-	GenerateTitle  bool            `json:"generateTitle"`
+	InitialMessage    json.RawMessage   `json:"initialMessage"`
+	GenerateTitle     bool              `json:"generateTitle"`
 }
 
 func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any, error) {
