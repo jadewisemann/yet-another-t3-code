@@ -28,6 +28,9 @@ type Scenario struct {
 //	await      wait until stream `stream` has sent a chunk value matching `match`
 //	interrupt  end stream `stream` and wait for its Exit
 //	http       send a plain HTTP request (no auth unless `auth` is true)
+//	cli        run the server binary with `args` (for example `auth pairing create`)
+//	file       read a file under the data directory while the server runs
+//	connect    open another /ws socket with `bearer` and record the status
 type Step struct {
 	Op      string          `json:"op"`
 	As      string          `json:"as,omitempty"`     // name for a call or stream
@@ -37,6 +40,9 @@ type Step struct {
 	// Match is a JSON object; a value matches when every key in Match is
 	// present with an equal value (recursively).
 	Match json.RawMessage `json:"match,omitempty"`
+	// Ignore lists field names whose values this step does not record
+	// (they become "<ignored>"), for values upstream itself does not pin down.
+	Ignore []string `json:"ignore,omitempty"`
 	// TimeoutMs bounds call/await/interrupt. Default 15000.
 	TimeoutMs int `json:"timeoutMs,omitempty"`
 
@@ -44,8 +50,27 @@ type Step struct {
 	HTTPMethod string `json:"httpMethod,omitempty"`
 	Path       string `json:"path,omitempty"`
 	Auth       bool   `json:"auth,omitempty"`
-	// Record controls which part of a response goes into the transcript:
-	// "full" (default), "status", or "keys" (top-level keys only).
+	// Bearer sends this token instead (expanded), for example "${var:access}".
+	Bearer string `json:"bearer,omitempty"`
+	// Body and ContentType are sent with an http step (Body is expanded).
+	Body        string `json:"body,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
+
+	// cli: arguments after the binary, expanded. Every cli call gets
+	// `--base-dir <base>` appended.
+	Args []string `json:"args,omitempty"`
+	// Capture stores top-level string fields of a JSON result (cli stdout,
+	// http body, or call success value) as `${var:<name>}`: {"name": "field"}.
+	Capture map[string]string `json:"capture,omitempty"`
+
+	// file: path relative to the data directory.
+	File string `json:"file,omitempty"`
+
+	// Record controls which part of a result goes into the transcript:
+	// "full" (default), "status" (http status / cli exit code only), or
+	// "keys" (sorted top-level keys of the JSON result). On an await step,
+	// "match" keeps only the matching value, for streams whose earlier
+	// values depend on timing.
 	Record string `json:"record,omitempty"`
 }
 

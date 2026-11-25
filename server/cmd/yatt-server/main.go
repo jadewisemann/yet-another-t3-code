@@ -5,10 +5,12 @@
 //
 //	yatt-server serve [--base-dir D] [--port P] [--host H] [--no-browser] [cwd]
 //	yatt-server auth session issue [--base-dir D] [--token-only] [--label L] [--ttl 365d]
+//	yatt-server auth pairing create [--base-dir D] [--json] [--label L] [--ttl 5m] [--scope S ...]
 //	yatt-server --version
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
@@ -31,11 +33,13 @@ func main() {
 	}
 	switch {
 	case args[0] == "--version" || args[0] == "-v":
-		fmt.Println("yatt-server v" + server.Version)
+		fmt.Printf("yatt-server v%s (T3 Code %s)\n", server.BuildVersion, server.Version)
 	case args[0] == "serve":
 		serve(args[1:])
 	case len(args) >= 3 && args[0] == "auth" && args[1] == "session" && args[2] == "issue":
 		issue(args[3:])
+	case len(args) >= 3 && args[0] == "auth" && args[1] == "pairing" && args[2] == "create":
+		createPairing(args[3:])
 	default:
 		usage()
 	}
@@ -72,15 +76,25 @@ func serve(args []string) {
 		fatal(err)
 	}
 	addr := net.JoinHostPort(*host, strconv.Itoa(*port))
-	srv := &http.Server{Addr: addr, Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		fatal(err)
+	}
+	removeState, err := s.WriteRuntimeState(ln.Addr())
+	if err != nil {
+		fatal(err)
+	}
+	defer removeState()
+	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		<-sig
 		_ = srv.Close()
 	}()
-	fmt.Printf("yatt-server listening on http://%s (data: %s)\n", addr, *baseDir)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	fmt.Printf("yatt-server listening on http://%s (data: %s)\n", ln.Addr(), *baseDir)
+	if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+		removeState()
 		fatal(err)
 	}
 }
@@ -105,6 +119,41 @@ func issue(args []string) {
 		return
 	}
 	fmt.Printf("Issued a session token for %q, valid for %s:\n%s\n", *label, *ttl, token)
+}
+
+type multiFlag []string
+
+func (m *multiFlag) String() string     { return strings.Join(*m, ",") }
+func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
+
+func createPairing(args []string) {
+	fs := flag.NewFlagSet("pairing create", flag.ExitOnError)
+	baseDir := fs.String("base-dir", defaultBaseDir(), "data directory")
+	asJSON := fs.Bool("json", false, "print JSON")
+	label := fs.String("label", "", "label for the paired client")
+	ttl := fs.String("ttl", "5m", "lifetime of the credential")
+	var scopes multiFlag
+	fs.Var(&scopes, "scope", "scope to grant (repeatable)")
+	_ = fs.Parse(args)
+	d, err := parseTTL(*ttl)
+	if err != nil {
+		fatal(err)
+	}
+	p, credential, err := server.NewSessions(server.UserData(*baseDir)).CreatePairing(*label, scopes, d)
+	if err != nil {
+		fatal(err)
+	}
+	if *asJSON {
+		out := map[string]any{"id": p.ID, "credential": credential, "scopes": p.Scopes,
+			"expiresAt": p.ExpiresAt.UTC().Format("2006-01-02T15:04:05.000Z")}
+		if p.Label != "" {
+			out["label"] = p.Label
+		}
+		data, _ := json.MarshalIndent(out, "", "  ")
+		fmt.Println(string(data))
+		return
+	}
+	fmt.Printf("Pairing credential (expires %s):\n%s\n", p.ExpiresAt.Format(time.RFC3339), credential)
 }
 
 func parseTTL(s string) (time.Duration, error) {

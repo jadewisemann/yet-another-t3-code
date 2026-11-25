@@ -1,0 +1,7 @@
+{
+  "description": "While serving, the server records where it listens in userdata/server-runtime.json. YATT reads this file to find a running local server.",
+  "tier": "p1",
+  "steps": [
+    { "op": "file", "file": "userdata/server-runtime.json" }
+  ]
+}

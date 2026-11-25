@@ -1,0 +1,7 @@
+{
+  "description": "server.getConfig answers on a fresh data directory. Only the top-level keys are recorded, since values describe the machine (providers found, paths).",
+  "tier": "p1",
+  "steps": [
+    { "op": "call", "method": "server.getConfig", "payload": {}, "record": "keys" }
+  ]
+}

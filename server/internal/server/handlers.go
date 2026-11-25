@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/jadewisemann/yet-another-t3-code/server/internal/store"
 )
@@ -20,6 +23,8 @@ func (s *Server) registerHandlers() map[string]Handler {
 		"orchestration.subscribeThread": {Stream: true, Run: s.subscribeThread},
 		"orchestration.dispatchCommand": {Unary: s.dispatchCommand},
 		"projects.mutate":               {Unary: s.mutateProject},
+		"orchestration.launchThread":    {Unary: s.launchThread},
+		"server.getConfig":              {Unary: s.getConfig},
 	}
 }
 
@@ -325,4 +330,92 @@ func (s *Server) subscribeThread(ctx context.Context, payload json.RawMessage, e
 			}
 		}
 	}
+}
+
+// --- orchestration.launchThread (spec/behavior/threads.md THREAD-6) ---------
+
+type launchInput struct {
+	CommandID         string          `json:"commandId"`
+	CreationSource    *string         `json:"creationSource"`
+	ThreadID          *string         `json:"threadId"`
+	ProjectID         string          `json:"projectId"`
+	Title             string          `json:"title"`
+	ModelSelection    json.RawMessage `json:"modelSelection"`
+	RuntimeMode       string          `json:"runtimeMode"`
+	InteractionMode   string          `json:"interactionMode"`
+	WorkspaceStrategy struct {
+		Type   string  `json:"type"`
+		Branch *string `json:"branch"`
+	} `json:"workspaceStrategy"`
+	InitialMessage json.RawMessage `json:"initialMessage"`
+}
+
+func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any, error) {
+	var in launchInput
+	if err := json.Unmarshal(payload, &in); err != nil {
+		return nil, err
+	}
+	if in.WorkspaceStrategy.Type != "root" {
+		return nil, fmt.Errorf("yatt-server does not implement workspace strategy %q yet", in.WorkspaceStrategy.Type)
+	}
+	if len(in.InitialMessage) > 0 && string(in.InitialMessage) != "null" {
+		return nil, errors.New("yatt-server cannot run agents yet, so it cannot launch a thread with a first message (phase P2)")
+	}
+	threadID := ""
+	if in.ThreadID != nil && *in.ThreadID != "" {
+		threadID = *in.ThreadID
+	} else {
+		id, err := newUUID()
+		if err != nil {
+			return nil, err
+		}
+		// Upstream's shape for server-chosen ids (scenario launch-thread).
+		threadID = "thread:project:" + in.ProjectID + ":" + id
+	}
+	source := "web"
+	if in.CreationSource != nil {
+		source = *in.CreationSource
+	}
+	now := store.Now()
+	_, err := s.store.Decide(ctx, in.CommandID, func(st *store.State) (string, any, error) {
+		p, ok := st.Projects[in.ProjectID]
+		if !ok {
+			return "", nil, &TypedError{Tag: "OrchestrationV2DispatchCommandError", Fields: map[string]any{
+				"commandId": in.CommandID, "commandType": "thread.launch", "message": "Project not found: " + in.ProjectID,
+			}}
+		}
+		branch := in.WorkspaceStrategy.Branch
+		if branch == nil {
+			branch = gitBranch(p.WorkspaceRoot)
+		}
+		return store.ThreadCreated, store.Thread{
+			ID: threadID, ProjectID: in.ProjectID, Title: in.Title, CreatedBy: "user", CreationSource: source,
+			ModelSelection: in.ModelSelection, RuntimeMode: in.RuntimeMode, InteractionMode: in.InteractionMode,
+			Branch: branch, CreatedAt: now, UpdatedAt: now,
+		}, nil
+	})
+	if err != nil && !errors.Is(err, store.ErrDuplicate) {
+		return nil, err
+	}
+	var projection map[string]any
+	s.store.Read(func(st *store.State, _ int64) {
+		if t, ok := st.Threads[threadID]; ok {
+			projection = renderThreadProjection(t)
+		}
+	})
+	return map[string]any{"threadId": threadID, "resumed": false, "projection": projection}, nil
+}
+
+// gitBranch reads the checked-out branch of a repository without running
+// git, or nil when root is not a repository or HEAD is detached.
+func gitBranch(root string) *string {
+	data, err := os.ReadFile(filepath.Join(root, ".git", "HEAD"))
+	if err != nil {
+		return nil
+	}
+	ref, ok := strings.CutPrefix(strings.TrimSpace(string(data)), "ref: refs/heads/")
+	if !ok {
+		return nil
+	}
+	return &ref
 }

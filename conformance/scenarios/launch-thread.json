@@ -1,0 +1,69 @@
+{
+  "description": "launchThread as YATT sends it, but without a first message, so no provider is started: workspaceStrategy root, generateTitle true. The server picks the thread id and fills in the workspace's current git branch. Which intermediate shell values arrive first depends on timing, so only the matching thread.updated is recorded, without its sequence: upstream sends either the creation event (2) or the next one (3) depending on how fast it coalesces them.",
+  "tier": "p1",
+  "steps": [
+    {
+      "op": "call",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {}
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "launch",
+      "method": "orchestration.launchThread",
+      "payload": {
+        "commandId": "${uuid:cmd-launch}",
+        "creationSource": "web",
+        "projectId": "${uuid:project}",
+        "title": "Launched thread",
+        "generateTitle": true,
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "workspaceStrategy": {
+          "type": "root"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "branch": "main"
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    }
+  ]
+}

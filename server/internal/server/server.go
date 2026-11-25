@@ -20,8 +20,13 @@ import (
 	"github.com/jadewisemann/yet-another-t3-code/server/internal/wire"
 )
 
-// Version is the server version reported to clients.
-var Version = "0.0.0-dev"
+// Version is the upstream T3 Code version whose behavior this server
+// implements (spec/upstream-version). Clients see it as `serverVersion`,
+// because they use it to decide what the server speaks.
+var Version = "0.1.11"
+
+// BuildVersion is yatt-server's own version, shown by `--version`.
+var BuildVersion = "0.0.0-dev"
 
 // OrchestrationProtocolVersion is what `/ws?orchestrationProtocol=` must carry.
 const OrchestrationProtocolVersion = 2
@@ -89,15 +94,24 @@ func New(cfg Config) (*Server, error) {
 	return s, nil
 }
 
+func newUUID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
+}
+
 func loadOrCreateID(path string) (string, error) {
 	if data, err := os.ReadFile(path); err == nil {
 		return strings.TrimSpace(string(data)), nil
 	}
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	id := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+	id, err := newUUID()
+	if err != nil {
+		return "", err
+	}
 	return id, os.WriteFile(path, []byte(id), 0o600)
 }
 
@@ -106,6 +120,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /.well-known/t3/environment", s.environment)
 	mux.HandleFunc("GET /ws", s.websocket)
+	mux.HandleFunc("POST /oauth/token", s.oauthToken)
 	return mux
 }
 
@@ -114,7 +129,7 @@ func (s *Server) environment(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"environmentId":                s.envID,
 		"label":                        host,
-		"platform":                     map[string]string{"os": runtime.GOOS, "arch": goArch()},
+		"platform":                     map[string]string{"os": platformOS(), "arch": goArch()},
 		"serverVersion":                Version,
 		"orchestrationProtocolVersion": OrchestrationProtocolVersion,
 		"databaseMigration":            0,
@@ -123,10 +138,13 @@ func (s *Server) environment(w http.ResponseWriter, r *http.Request) {
 }
 
 func goArch() string {
-	if runtime.GOARCH == "amd64" {
+	switch runtime.GOARCH {
+	case "amd64":
 		return "x64"
+	case "arm64":
+		return "arm64"
 	}
-	return runtime.GOARCH
+	return "other"
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -1,0 +1,230 @@
+{
+  "scenario": "launch-thread",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "method": "projects.mutate",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "archivedAt": null,
+          "autoPull": false,
+          "createdAt": "<time>",
+          "defaultModelSelection": null,
+          "defaultThreadEnvMode": null,
+          "deletedAt": null,
+          "faviconPath": null,
+          "id": "<uuid:project>",
+          "pinnedAt": null,
+          "projectIcon": null,
+          "repositoryIdentity": null,
+          "scripts": [],
+          "title": "workspace",
+          "updatedAt": "<time>",
+          "workspaceRoot": "<workspace>"
+        }
+      }
+    },
+    {
+      "step": 1,
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 2,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": 1,
+            "threads": []
+          }
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "op": "call",
+      "as": "launch",
+      "method": "orchestration.launchThread",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "projection": {
+            "attempts": [],
+            "checkpointScopes": [],
+            "checkpoints": [],
+            "contextHandoffs": [],
+            "contextTransfers": [],
+            "messages": [],
+            "nodes": [],
+            "plans": [],
+            "providerSessions": [],
+            "providerThreads": [],
+            "providerTurns": [],
+            "runs": [],
+            "runtimeRequests": [],
+            "subagents": [],
+            "thread": {
+              "activeProviderThreadId": null,
+              "archivedAt": null,
+              "branch": "main",
+              "createdAt": "<time>",
+              "createdBy": "user",
+              "creationSource": "web",
+              "deletedAt": null,
+              "forkedFrom": null,
+              "id": "thread:project:<uuid:project>:<uuid#1>",
+              "interactionMode": "default",
+              "lastVisitedAt": null,
+              "lineage": {
+                "parentThreadId": null,
+                "relationshipToParent": null,
+                "rootThreadId": "thread:project:<uuid:project>:<uuid#1>"
+              },
+              "modelSelection": {
+                "instanceId": "codex",
+                "model": "gpt-5.5"
+              },
+              "projectId": "<uuid:project>",
+              "providerInstanceId": "codex",
+              "pullRequests": [],
+              "runtimeMode": "full-access",
+              "settledAt": null,
+              "settledOverride": null,
+              "snoozedAt": null,
+              "snoozedUntil": null,
+              "title": "Launched thread",
+              "updatedAt": "<time>",
+              "worktreePath": null
+            },
+            "turnItems": [],
+            "updatedAt": "<time>",
+            "visibleTurnItems": []
+          },
+          "resumed": false,
+          "threadId": "thread:project:<uuid:project>:<uuid#1>"
+        }
+      }
+    },
+    {
+      "step": 4,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": "<ignored>",
+          "thread": {
+            "activeProviderThreadId": null,
+            "activeRunId": null,
+            "activityRunStartedAt": null,
+            "activityRunStatus": null,
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": "main",
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "thread:project:<uuid:project>:<uuid#1>",
+            "interactionMode": "default",
+            "itemCount": 0,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": null,
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": null,
+            "latestRunRequestedAt": null,
+            "latestRunStartedAt": null,
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": null,
+            "latestUserMessageAt": null,
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "thread:project:<uuid:project>:<uuid#1>"
+            },
+            "modelSelection": {
+              "instanceId": "codex",
+              "model": "gpt-5.5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": null,
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [],
+            "providerInstanceId": "codex",
+            "pullRequests": [],
+            "runtimeMode": "full-access",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "idle",
+            "title": "Launched thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 0,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "op": "interrupt",
+      "as": "shell",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    }
+  ]
+}
