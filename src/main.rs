@@ -3,6 +3,7 @@ mod keymap;
 mod local;
 mod protocol;
 mod rpc;
+mod terminal;
 mod text_input;
 mod theme;
 mod workspace;

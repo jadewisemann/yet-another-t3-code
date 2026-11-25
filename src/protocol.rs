@@ -19,6 +19,11 @@ pub mod method {
     pub const GET_TURN_DIFF: &str = "orchestration.getTurnDiff";
     pub const CREATE_UPLOAD_URL: &str = "attachments.createUploadUrl";
     pub const DELETE_ATTACHMENT: &str = "attachments.delete";
+    pub const TERMINAL_ATTACH: &str = "terminal.attach";
+    pub const TERMINAL_WRITE: &str = "terminal.write";
+    pub const TERMINAL_RESIZE: &str = "terminal.resize";
+    pub const TERMINAL_CLEAR: &str = "terminal.clear";
+    pub const TERMINAL_OPEN: &str = "terminal.open";
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -26,6 +31,8 @@ pub mod method {
 pub struct ProjectShell {
     pub id: String,
     pub title: String,
+    #[serde(default)]
+    pub workspace_root: String,
     #[serde(default)]
     pub default_model_selection: Option<Value>,
     #[serde(default)]

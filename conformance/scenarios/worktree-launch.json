@@ -49,10 +49,7 @@
           "text": "hello",
           "attachments": []
         }
-      },
-      "ignore": [
-        "sequence"
-      ]
+      }
     },
     {
       "op": "subscribe",

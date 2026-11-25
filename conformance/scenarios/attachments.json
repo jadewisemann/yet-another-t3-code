@@ -138,10 +138,7 @@
         "dispatchMode": {
           "type": "start_immediately"
         }
-      },
-      "ignore": [
-        "sequence"
-      ]
+      }
     },
     {
       "op": "await",

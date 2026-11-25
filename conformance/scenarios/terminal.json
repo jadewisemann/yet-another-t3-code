@@ -1,0 +1,140 @@
+{
+  "description": "Thread terminals: the metadata stream, attach starting a shell (T3CODE_TERMINAL_SHELL from the request env), input and output, resize, clear, the shell's exit status, open restarting an exited terminal with empty history, close, and the errors for a missing terminal and a missing folder.",
+  "tier": "p3",
+  "steps": [
+    {
+      "op": "subscribe",
+      "as": "meta",
+      "method": "subscribeTerminalMetadata",
+      "payload": {}
+    },
+    {
+      "op": "await",
+      "stream": "meta",
+      "match": {"type": "snapshot"},
+      "ignore": ["managerId"]
+    },
+    {
+      "op": "subscribe",
+      "as": "term",
+      "method": "terminal.attach",
+      "payload": {
+        "threadId": "thread-1",
+        "terminalId": "term-1",
+        "cwd": "${workspace}",
+        "cols": 80,
+        "rows": 24,
+        "env": {"T3CODE_TERMINAL_SHELL": "fake-shell"}
+      },
+      "aside": [{"type": "activity"}]
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "snapshot"},
+      "ignore": ["pid"]
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "output", "data": "ready thread-1\r\n"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "write",
+      "method": "terminal.write",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1", "data": "hello\r"}
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "output", "data": "got hello\r\n"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "resize",
+      "method": "terminal.resize",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1", "cols": 100, "rows": 30}
+    },
+    {
+      "op": "call",
+      "as": "clear",
+      "method": "terminal.clear",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1"}
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "cleared"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "exit",
+      "method": "terminal.write",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1", "data": "exit\r"}
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "exited"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "write-after-exit",
+      "method": "terminal.write",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1", "data": "x"}
+    },
+    {
+      "op": "call",
+      "as": "reopen",
+      "method": "terminal.open",
+      "payload": {
+        "threadId": "thread-1",
+        "terminalId": "term-1",
+        "cwd": "${workspace}",
+        "env": {"T3CODE_TERMINAL_SHELL": "fake-shell"}
+      },
+      "ignore": ["pid"]
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "output", "data": "ready thread-1\r\n"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "close",
+      "method": "terminal.close",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1"}
+    },
+    {
+      "op": "await",
+      "stream": "term",
+      "match": {"type": "closed"},
+      "record": "match"
+    },
+    {
+      "op": "await",
+      "stream": "meta",
+      "match": {"type": "remove"},
+      "record": "match"
+    },
+    {
+      "op": "call",
+      "as": "write-missing",
+      "method": "terminal.write",
+      "payload": {"threadId": "thread-1", "terminalId": "term-1", "data": "x"}
+    },
+    {
+      "op": "call",
+      "as": "open-missing-folder",
+      "method": "terminal.open",
+      "payload": {"threadId": "thread-1", "terminalId": "term-2", "cwd": "${workspace}/missing"}
+    }
+  ]
+}

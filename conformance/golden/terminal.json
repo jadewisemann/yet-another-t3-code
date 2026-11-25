@@ -1,0 +1,273 @@
+{
+  "scenario": "terminal",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "subscribe",
+      "as": "meta",
+      "method": "subscribeTerminalMetadata"
+    },
+    {
+      "step": 1,
+      "op": "await",
+      "as": "meta",
+      "values": [
+        {
+          "managerId": "<ignored>",
+          "terminals": [],
+          "type": "snapshot"
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "op": "subscribe",
+      "as": "term",
+      "method": "terminal.attach"
+    },
+    {
+      "step": 3,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "snapshot": {
+            "cols": 80,
+            "cwd": "<workspace>",
+            "exitCode": null,
+            "exitSignal": null,
+            "history": "",
+            "label": "Terminal 1",
+            "pid": "<ignored>",
+            "rows": 24,
+            "sequence": 1,
+            "status": "running",
+            "terminalId": "term-1",
+            "threadId": "thread-1",
+            "updatedAt": "<time>",
+            "worktreePath": null
+          },
+          "type": "snapshot"
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "data": "ready thread-1\r\n",
+          "sequence": 2,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "output"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "op": "call",
+      "as": "write",
+      "method": "terminal.write",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 6,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "data": "got hello\r\n",
+          "sequence": 3,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "output"
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "op": "call",
+      "as": "resize",
+      "method": "terminal.resize",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 8,
+      "op": "call",
+      "as": "clear",
+      "method": "terminal.clear",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 9,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "sequence": 5,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "cleared"
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "op": "call",
+      "as": "exit",
+      "method": "terminal.write",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 11,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "exitCode": 3,
+          "exitSignal": 0,
+          "sequence": 6,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "exited"
+        }
+      ]
+    },
+    {
+      "step": 12,
+      "op": "call",
+      "as": "write-after-exit",
+      "method": "terminal.write",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 13,
+      "op": "call",
+      "as": "reopen",
+      "method": "terminal.open",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "cols": 100,
+          "cwd": "<workspace>",
+          "exitCode": null,
+          "exitSignal": null,
+          "history": "",
+          "label": "Terminal 1",
+          "pid": "<ignored>",
+          "rows": 30,
+          "sequence": 7,
+          "status": "running",
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "updatedAt": "<time>",
+          "worktreePath": null
+        }
+      }
+    },
+    {
+      "step": 14,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "data": "ready thread-1\r\n",
+          "sequence": 8,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "output"
+        }
+      ]
+    },
+    {
+      "step": 15,
+      "op": "call",
+      "as": "close",
+      "method": "terminal.close",
+      "exit": {
+        "_tag": "Success",
+        "value": null
+      }
+    },
+    {
+      "step": 16,
+      "op": "await",
+      "as": "term",
+      "values": [
+        {
+          "sequence": 9,
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "closed"
+        }
+      ]
+    },
+    {
+      "step": 17,
+      "op": "await",
+      "as": "meta",
+      "values": [
+        {
+          "terminalId": "term-1",
+          "threadId": "thread-1",
+          "type": "remove"
+        }
+      ]
+    },
+    {
+      "step": 18,
+      "op": "call",
+      "as": "write-missing",
+      "method": "terminal.write",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Fail",
+            "error": {
+              "_tag": "TerminalSessionLookupError",
+              "terminalId": "term-1",
+              "threadId": "thread-1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "step": 19,
+      "op": "call",
+      "as": "open-missing-folder",
+      "method": "terminal.open",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Fail",
+            "error": {
+              "_tag": "TerminalCwdNotFoundError",
+              "cwd": "<workspace>/missing"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

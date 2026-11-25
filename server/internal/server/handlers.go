@@ -30,6 +30,14 @@ func (s *Server) registerHandlers() map[string]Handler {
 		"attachments.createUploadUrl":     {Unary: s.createUploadURL},
 		"attachments.delete":              {Unary: s.deleteAttachment},
 		"orchestration.getFullThreadDiff": {Unary: s.getFullThreadDiff},
+		"terminal.open":                   {Unary: s.terminalOpen},
+		"terminal.write":                  {Unary: s.terminalWrite},
+		"terminal.resize":                 {Unary: s.terminalResize},
+		"terminal.clear":                  {Unary: s.terminalClear},
+		"terminal.close":                  {Unary: s.terminalClose},
+		"terminal.attach":                 {Stream: true, Run: s.terminalAttach},
+		"terminal.observe":                {Stream: true, Run: s.terminalObserve},
+		"subscribeTerminalMetadata":       {Stream: true, Run: s.subscribeTerminalMetadata},
 	}
 }
 

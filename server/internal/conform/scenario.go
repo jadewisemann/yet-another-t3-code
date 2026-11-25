@@ -40,8 +40,9 @@ type Step struct {
 	// Match is a JSON object; a value matches when every key in Match is
 	// present with an equal value (recursively).
 	Match json.RawMessage `json:"match,omitempty"`
-	// Ignore lists field names whose values this step does not record
-	// (they become "<ignored>"), for values upstream itself does not pin down.
+	// Ignore lists field names whose values this step (await or call) does
+	// not record (they become "<ignored>"), for values upstream itself does
+	// not pin down.
 	Ignore []string `json:"ignore,omitempty"`
 	// Aside (subscribe) lists patterns for values whose position in the
 	// stream depends on timing even upstream. They are kept apart from the

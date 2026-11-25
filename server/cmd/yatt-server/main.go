@@ -90,6 +90,7 @@ func serve(args []string) {
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		<-sig
+		s.CloseTerminals()
 		_ = srv.Close()
 	}()
 	fmt.Printf("yatt-server listening on http://%s (data: %s)\n", ln.Addr(), *baseDir)

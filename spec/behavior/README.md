@@ -19,3 +19,4 @@
 | `diffs.md` | P3 |
 | `worktrees.md` | P3 |
 | `attachments.md` | P3 |
+| `terminals.md` | P3 |

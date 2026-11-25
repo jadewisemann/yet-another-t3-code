@@ -1,0 +1,12 @@
+#!/bin/sh
+# A shell for terminal scenarios: no echo, a fixed greeting, one reply per
+# line, and exit status 3 on "exit".
+stty -echo
+printf 'ready %s\n' "$T3CODE_THREAD_ID"
+while IFS= read -r line; do
+  line=$(printf '%s' "$line" | tr -d '\r')
+  case "$line" in
+    exit) exit 3 ;;
+    *) printf 'got %s\n' "$line" ;;
+  esac
+done
