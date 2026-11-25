@@ -5,7 +5,7 @@
 // Responses and notifications are the smallest values that satisfy
 // spec/generated/codex.json, with the fields that matter overridden below.
 // Every message in and out is appended to $FAKE_CODEX_LOG when it is set.
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -215,6 +215,8 @@ async function scripted(text, threadId, turn, itemId, reply) {
     at = Date.now();
     const changes = [{ path: "hello.txt", kind: { type: "add" }, diff: "hello\n" }];
     started({ type: "fileChange", id: fcId, changes, status: "inProgress" }, at);
+    // The change lands in the workspace so the checkpoint lists it.
+    writeFileSync(join(threads.get(threadId)?.cwd ?? process.cwd(), "hello.txt"), "hello\n");
     completed({ type: "fileChange", id: fcId, changes, status: "completed" }, at);
   }
   // Items that start in the same millisecond would sort by id.

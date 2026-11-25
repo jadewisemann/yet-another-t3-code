@@ -840,8 +840,11 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 	ordinal := r.nextCkpt
 	ref := checkpointRef(r.ids.scope, ordinal)
 	status := "ready"
+	files := []any{}
 	if ok, err := captureCheckpoint(r.cwd, ref); err != nil || !ok {
 		status = "missing"
+	} else if ordinal > 0 {
+		files = checkpointFiles(r.cwd, checkpointRef(r.ids.scope, ordinal-1), ref)
 	}
 	at := store.Now()
 	if interrupted {
@@ -849,28 +852,28 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 		at = done
 	}
 	ckptID := r.ids.checkpoint(ordinal)
-	checkpoint := func(n int, runID any, parent any, appRun any, ref, status, at string) map[string]any {
+	checkpoint := func(n int, runID any, parent any, appRun any, ref, status, at string, files []any) map[string]any {
 		return map[string]any{
 			"id": r.ids.checkpoint(n), "threadId": r.ids.thread, "scopeId": r.ids.scope, "runId": runID,
 			"nodeId": r.ids.root, "parentCheckpointId": parent, "ordinalWithinScope": n, "appRunOrdinal": appRun,
-			"ref": ref, "status": status, "files": []any{}, "capturedAt": at,
+			"ref": ref, "status": status, "files": files, "capturedAt": at,
 		}
 	}
 	var evs []event
 	if b := r.baseline; b != nil {
 		evs = append(evs, event{cause: effect, typ: "checkpoint.captured", nodeID: r.ids.root, driver: "codex",
-			payload: checkpoint(0, nil, nil, nil, b.ref, b.status, b.at)})
+			payload: checkpoint(0, nil, nil, nil, b.ref, b.status, b.at, []any{})})
 	}
 	evs = append(evs,
 		event{cause: effect, typ: "checkpoint.captured", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
-			payload: checkpoint(ordinal, r.ids.run, r.parent, r.ids.ordinal, ref, status, at)},
+			payload: checkpoint(ordinal, r.ids.run, r.parent, r.ids.ordinal, ref, status, at, files)},
 		event{cause: effect, typ: "turn-item.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex", payload: map[string]any{
 			"id":       "turn-item:provider:codex:native-item:" + encodeURIComponent("checkpoint:"+ckptID),
 			"threadId": r.ids.thread, "runId": r.ids.run, "nodeId": r.ids.root,
 			"providerThreadId": r.ids.providerThread, "providerTurnId": nil, "nativeItemRef": nil,
 			"parentItemId": nil, "ordinal": r.nextItemOrdinal(), "status": "completed", "title": nil,
 			"startedAt": at, "completedAt": at, "updatedAt": at, "type": "checkpoint",
-			"checkpointId": ckptID, "scopeId": r.ids.scope, "files": []any{},
+			"checkpointId": ckptID, "scopeId": r.ids.scope, "files": files,
 		}},
 		event{cause: effect, typ: "run.updated", runID: r.ids.run, nodeID: r.ids.root, payload: r.runPayload(runStatus, at, ckptID)},
 	)

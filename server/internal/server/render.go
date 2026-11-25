@@ -207,6 +207,8 @@ func renderThreadProjection(t *store.Thread) map[string]any {
 		for _, e := range t.Proj.List(name) {
 			if name == "turnItems" {
 				list = append(list, wireTurnItem(e.Payload))
+			} else if name == "checkpoints" {
+				list = append(list, wireCheckpoint(e.Payload))
 			} else {
 				list = append(list, e.Payload)
 			}
@@ -250,8 +252,11 @@ func renderThreadEvent(st *store.State, e store.Event) any {
 		if json.Unmarshal(e.Data, &env) != nil {
 			return nil
 		}
-		if env.Type == "turn-item.updated" {
+		switch env.Type {
+		case "turn-item.updated":
 			env.Payload = wireTurnItem(env.Payload)
+		case "checkpoint.captured":
+			env.Payload = wireCheckpoint(env.Payload)
 		}
 		return threadWire{env.ThreadID, env}
 	}
