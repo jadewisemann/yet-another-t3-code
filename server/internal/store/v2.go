@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -154,7 +155,35 @@ func (p *Projection) List(list string) []*Entity {
 			}
 			return num(a, "ordinal") < num(b, "ordinal")
 		}
-	case "runtimeRequests", "messages":
+	case "messages":
+		// Messages follow their turn items; a message no item shows yet,
+		// such as a queued one, goes last (upstream sortMessagesByTurnItemOrder).
+		ordinals := map[string]float64{}
+		for _, item := range p.lists["turnItems"] {
+			if t := item.String("type"); t != "user_message" && t != "assistant_message" {
+				continue
+			}
+			id, n := item.String("messageId"), item.Number("ordinal")
+			if old, ok := ordinals[id]; !ok || n < old {
+				ordinals[id] = n
+			}
+		}
+		ordinal := func(e *Entity) float64 {
+			if n, ok := ordinals[e.ID]; ok {
+				return n
+			}
+			return math.MaxFloat64
+		}
+		less = func(a, b *Entity) bool {
+			if ordinal(a) != ordinal(b) {
+				return ordinal(a) < ordinal(b)
+			}
+			if str(a, "createdAt") != str(b, "createdAt") {
+				return str(a, "createdAt") < str(b, "createdAt")
+			}
+			return byID(a, b)
+		}
+	case "runtimeRequests":
 		less = func(a, b *Entity) bool {
 			if str(a, "createdAt") != str(b, "createdAt") {
 				return str(a, "createdAt") < str(b, "createdAt")

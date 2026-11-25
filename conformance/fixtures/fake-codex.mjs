@@ -93,6 +93,7 @@ const write = (message) => {
 const respond = (id, result) => write({ id, result });
 const notify = (method, params) => write({ method, params });
 
+const notifyLater = (f, ms) => setTimeout(f, ms);
 let threadCounter = 0;
 let turnCounter = 0;
 const threads = new Map();
@@ -117,15 +118,17 @@ function startTurn(id, params) {
     }, 10);
     return;
   }
+  // A turn whose text starts with "slow" takes a second, for queueing scenarios.
+  const delay = text.startsWith("slow") ? 1000 : 10;
+  notifyLater(() => notify("turn/started", notificationOf("turn/started", { threadId, turn })), 10);
   setTimeout(() => {
-    notify("turn/started", notificationOf("turn/started", { threadId, turn }));
     const item = { type: "agentMessage", id: itemId, text: "" };
     const startedAtMs = Date.now();
     notify("item/started", notificationOf("item/started", { threadId, turnId, item, startedAtMs }));
     notify("item/agentMessage/delta", notificationOf("item/agentMessage/delta", { threadId, turnId, itemId, delta: reply }));
     notify("item/completed", notificationOf("item/completed", { threadId, turnId, item: { ...item, text: reply }, startedAtMs, completedAtMs: Date.now() }));
     notify("turn/completed", notificationOf("turn/completed", { threadId, turn: { ...turn, status: "completed" } }));
-  }, 10);
+  }, delay);
 }
 
 function handle(message) {
