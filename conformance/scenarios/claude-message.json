@@ -1,0 +1,205 @@
+{
+  "description": "One turn with the Claude provider (the fake claude in conformance/fixtures): the user and assistant messages and the completed run on the thread stream, the shell's completed status, and the thread's projection once the turn is over.",
+  "tier": "p2",
+  "steps": [
+    {
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {},
+      "aside": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": "$present"
+        }
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create",
+        "createdBy": "user",
+        "creationSource": "web",
+        "commandId": "${uuid:cmd-create}",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "First thread",
+        "modelSelection": {
+          "instanceId": "claudeAgent",
+          "model": "claude-opus-5-5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "branch": null,
+        "worktreePath": null
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "send",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-send}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:cmd-send}",
+        "text": "hello fake claude",
+        "attachments": [],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "message.updated",
+          "payload": {
+            "role": "user"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "message.updated",
+          "payload": {
+            "role": "assistant",
+            "streaming": false
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "status": "completed"
+          }
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "status": "completed"
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    },
+    {
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "after",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "interrupt",
+      "stream": "after"
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "threads"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    }
+  ]
+}

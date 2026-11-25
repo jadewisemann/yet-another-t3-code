@@ -43,6 +43,18 @@ func Start(ctx context.Context, bin, root string) (*Target, error) {
 			return nil, err
 		}
 	}
+	// Upstream puts the login shell's PATH ahead of its own, so a CLI
+	// installed on the machine would win over the fixture on PATH. Settings
+	// name the fixture explicitly; yatt-server ignores this file.
+	if fake, err := exec.LookPath("claude"); err == nil && strings.Contains(fake, "conformance") {
+		settings := fmt.Sprintf(`{"providerInstances":{"claudeAgent":{"driver":"claudeAgent","config":{"binaryPath":%q}}}}`, fake)
+		if err := os.MkdirAll(filepath.Join(base, "userdata"), 0o755); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(filepath.Join(base, "userdata", "settings.json"), []byte(settings), 0o644); err != nil {
+			return nil, err
+		}
+	}
 	// Providers and the VCS layer expect a repository.
 	git := exec.Command("git", "init", "-q", "-b", "main", ws)
 	_ = git.Run()
@@ -57,8 +69,11 @@ func Start(ctx context.Context, bin, root string) (*Target, error) {
 	t.cmd.Stdout = t.Log
 	t.cmd.Stderr = t.Log
 	t.cmd.Env = append(os.Environ(), "NO_COLOR=1", "T3CODE_DISABLE_TELEMETRY=1",
-		"FAKE_CODEX_LOG="+filepath.Join(root, "fake-codex.log"),
-		"CODEX_HOME="+filepath.Join(root, "codex-home"))
+		"FAKE_CODEX_LOG="+filepath.Join(root, "fake-codex.log"), "FAKE_CLAUDE_LOG="+filepath.Join(root, "fake-claude.log"),
+		"CODEX_HOME="+filepath.Join(root, "codex-home"),
+		// Claude's auto-compact threshold depends on these; pin them so a
+		// recording does not depend on the machine's Claude setup.
+		"CLAUDE_CONFIG_DIR="+filepath.Join(root, "claude-home"), "CLAUDE_CODE_AUTO_COMPACT_WINDOW=500000")
 	t.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := t.cmd.Start(); err != nil {
 		return nil, err

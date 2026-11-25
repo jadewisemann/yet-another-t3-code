@@ -56,16 +56,19 @@ type pendingRequest struct {
 	kind     string            // "command", "file-change", "user_input"
 	native   map[string]string // app question id -> codex question id
 	answerCh chan requestAnswer
+	// A Claude can_use_tool request: its control request id and tool input.
+	claudeID    string
+	claudeInput map[string]any
 }
 
-func itemNodeID(key string) string {
-	return "node:provider:codex:native-item:" + encodeURIComponent(key)
+func itemNodeID(driver, key string) string {
+	return "node:provider:" + driver + ":native-item:" + encodeURIComponent(key)
 }
-func itemTurnItemID(key string) string {
-	return "turn-item:provider:codex:native-item:" + encodeURIComponent(key)
+func itemTurnItemID(driver, key string) string {
+	return "turn-item:provider:" + driver + ":native-item:" + encodeURIComponent(key)
 }
-func nativeRef(id string) map[string]any {
-	return map[string]any{"driver": "codex", "nativeId": id, "strength": "strong"}
+func nativeRef(driver, id string) map[string]any {
+	return map[string]any{"driver": driver, "nativeId": id, "strength": "strong"}
 }
 
 func (t *turn) startedAt(key, at string) string {
@@ -89,7 +92,7 @@ func (t *turn) ordinal(turnItemID string) int {
 }
 
 func (t *turn) item(nodeID, typ string, payload any) event {
-	return event{cause: t.sessionCause, typ: typ, runID: t.r.ids.run, nodeID: nodeID, driver: "codex", payload: payload}
+	return event{cause: t.sessionCause, typ: typ, runID: t.r.ids.run, nodeID: nodeID, driver: t.r.driver, payload: payload}
 }
 
 func (t *turn) node(id, kind, status, startedAt string, completedAt any, nativeID string, requestID any, parent string) map[string]any {
@@ -100,7 +103,7 @@ func (t *turn) node(id, kind, status, startedAt string, completedAt any, nativeI
 		"id": id, "threadId": t.r.ids.thread, "runId": t.r.ids.run, "parentNodeId": parent,
 		"rootNodeId": t.r.ids.root, "kind": kind, "status": status, "countsForRun": false,
 		"providerThreadId": t.r.ids.providerThread, "providerTurnId": t.r.providerTurn,
-		"nativeItemRef": nativeRef(nativeID), "runtimeRequestId": requestID, "checkpointScopeId": nil,
+		"nativeItemRef": nativeRef(t.r.driver, nativeID), "runtimeRequestId": requestID, "checkpointScopeId": nil,
 		"startedAt": startedAt, "completedAt": completedAt,
 	}
 }
@@ -109,7 +112,7 @@ func (t *turn) turnItem(id, nodeID, typ, status, startedAt string, completedAt a
 	m := map[string]any{
 		"id": id, "threadId": t.r.ids.thread, "runId": t.r.ids.run, "nodeId": nodeID,
 		"providerThreadId": t.r.ids.providerThread, "providerTurnId": t.r.providerTurn,
-		"nativeItemRef": nativeRef(nativeID), "parentItemId": nil, "ordinal": t.ordinal(id),
+		"nativeItemRef": nativeRef(t.r.driver, nativeID), "parentItemId": nil, "ordinal": t.ordinal(id),
 		"status": status, "title": nil, "startedAt": startedAt, "completedAt": completedAt,
 		"updatedAt": store.Now(), "type": typ,
 	}
@@ -140,15 +143,21 @@ func (t *turn) textEvents(x *textItem, completed bool) []event {
 		completedAt, status = now, "completed"
 	}
 	startedAt := t.startedAt(x.key, "")
-	nodeID, itemID := itemNodeID(x.key), itemTurnItemID(x.key)
+	nodeID, itemID := itemNodeID(t.r.driver, x.key), itemTurnItemID(t.r.driver, x.key)
 	kind, typ := "assistant_message", "assistant_message"
 	if x.reasoning {
 		kind, typ = "reasoning", "reasoning"
 	}
-	messageID := "message:provider:codex:native-item:" + encodeURIComponent(x.key)
+	messageID := "message:provider:" + t.r.driver + ":native-item:" + encodeURIComponent(x.key)
 	extra := map[string]any{"text": x.text.String(), "streaming": !completed}
 	if !x.reasoning {
 		extra["messageId"] = messageID
+	}
+	if x.reasoning && t.r.driver == claudeDriver {
+		// Claude thinking is a turn item of the root node, without a node.
+		item := t.turnItem(itemID, t.r.ids.root, typ, status, startedAt, completedAt, x.nativeID, extra)
+		item["title"] = "Thinking"
+		return []event{t.item(t.r.ids.root, "turn-item.updated", item)}
 	}
 	evs := []event{t.item(nodeID, "node.updated", t.node(nodeID, kind, status, startedAt, completedAt, x.nativeID, nil, ""))}
 	if completed && !x.reasoning {
@@ -237,7 +246,7 @@ func (t *turn) commandEvents(it codexItem, startedAtMs int64) []event {
 		completedAt = store.Now()
 	}
 	startedAt := t.startedAt(it.ID, msToTime(startedAtMs))
-	nodeID, itemID := itemNodeID(it.ID), itemTurnItemID(it.ID)
+	nodeID, itemID := itemNodeID(t.r.driver, it.ID), itemTurnItemID(t.r.driver, it.ID)
 	extra := map[string]any{"input": it.Command, "completionWake": "always"}
 	if it.AggregatedOutput != nil {
 		extra["output"] = *it.AggregatedOutput
@@ -261,7 +270,7 @@ func (t *turn) fileChangeEvents(it codexItem, startedAtMs int64) []event {
 		completedAt = store.Now()
 	}
 	startedAt := t.startedAt(it.ID, msToTime(startedAtMs))
-	nodeID, itemID := itemNodeID(it.ID), itemTurnItemID(it.ID)
+	nodeID, itemID := itemNodeID(t.r.driver, it.ID), itemTurnItemID(t.r.driver, it.ID)
 	changes := []any{}
 	for _, ch := range it.Changes {
 		op, _ := ch.Kind["type"].(string)
@@ -320,14 +329,14 @@ func (t *turn) requestID(nativeRequestID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "runtime-request:provider:codex:provider-turn:" + encodeURIComponent(t.r.providerTurn) +
+	return "runtime-request:provider:" + t.r.driver + ":provider-turn:" + encodeURIComponent(t.r.providerTurn) +
 		":native-request:" + encodeURIComponent(nativeRequestID) + ":" + u, nil
 }
 
 func (t *turn) runtimeRequest(id, nodeID, nativeRequestID, kind, createdAt string) map[string]any {
 	return map[string]any{
 		"id": id, "nodeId": nodeID, "providerTurnId": t.r.providerTurn,
-		"nativeRequestRef": nativeRef(nativeRequestID), "kind": kind, "status": "pending",
+		"nativeRequestRef": nativeRef(t.r.driver, nativeRequestID), "kind": kind, "status": "pending",
 		"responseCapability": map[string]any{"type": "live", "providerSessionId": t.r.ids.session},
 		"createdAt":          createdAt, "resolvedAt": nil,
 	}
@@ -376,7 +385,7 @@ func (t *turn) approval(ctx context.Context, n codex.Notification, kind string) 
 	item := t.turnItem(itemID, nodeID, "approval_request", "waiting", now, nil, p.ItemID, extra)
 	item["updatedAt"] = now
 	if err := t.r.append(ctx,
-		t.item(nodeID, "node.updated", t.node(nodeID, "approval_request", "waiting", now, nil, p.ItemID, id, itemNodeID(p.ItemID))),
+		t.item(nodeID, "node.updated", t.node(nodeID, "approval_request", "waiting", now, nil, p.ItemID, id, itemNodeID(t.r.driver, p.ItemID))),
 		t.item(nodeID, "turn-item.updated", item),
 		t.item(nodeID, "runtime-request.updated", t.runtimeRequest(id, nodeID, native, kind, now)),
 	); err != nil {
@@ -429,7 +438,7 @@ func (t *turn) userInput(ctx context.Context, n codex.Notification) error {
 			"question": nonEmpty(q.Question, "Choose an answer."), "options": options,
 		})
 	}
-	nodeID, itemID := itemNodeID(p.ItemID), itemTurnItemID(p.ItemID)
+	nodeID, itemID := itemNodeID(t.r.driver, p.ItemID), itemTurnItemID(t.r.driver, p.ItemID)
 	item := t.turnItem(itemID, nodeID, "user_input_request", "waiting", now, nil, p.ItemID,
 		map[string]any{"requestId": id, "questions": questions})
 	item["updatedAt"] = now
@@ -591,7 +600,7 @@ func (t *turn) notification(ctx context.Context, n codex.Notification) (bool, er
 	switch n.Method {
 	case "turn/started":
 		r.turnStarted = store.Now()
-		return false, r.append(ctx, event{cause: t.sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root, driver: "codex",
+		return false, r.append(ctx, event{cause: t.sessionCause, typ: "provider-turn.updated", runID: r.ids.run, nodeID: r.ids.root, driver: r.driver,
 			payload: r.providerTurnPayload("running", nil)})
 	case "item/started":
 		it := p.Item
@@ -622,7 +631,7 @@ func (t *turn) notification(ctx context.Context, n codex.Notification) (bool, er
 		}
 		key := reasoningKey(p.TurnID, p.ItemID, stream, index)
 		t.startedAt(key, "")
-		t.ordinal(itemTurnItemID(key))
+		t.ordinal(itemTurnItemID(t.r.driver, key))
 		t.text(key, p.ItemID, true).text.WriteString(p.Delta)
 	case "item/completed":
 		it := p.Item
@@ -742,6 +751,15 @@ func wireTurnItem(raw json.RawMessage) json.RawMessage {
 		if m["status"] == "failed" && strings.TrimSpace(diff) != "" {
 			m["diffStr"] = truncateDetail(diff)
 		}
+	case "dynamic_tool":
+		output, ok := m["output"]
+		if !ok {
+			return raw
+		}
+		delete(m, "output")
+		if str, isStr := output.(string); !isStr || strings.TrimSpace(str) != "" {
+			m["outputOmitted"] = true
+		}
 	case "checkpoint":
 		if !capCheckpointFiles(m) {
 			return raw
@@ -843,7 +861,7 @@ func (s *Server) respondRuntimeRequest(ctx context.Context, payload json.RawMess
 				return d, err
 			}
 			env := d.Data.(*store.Envelope)
-			env.RunID, env.NodeID, env.Driver, env.ProviderInstanceID = runID, nodeID, "codex", instance
+			env.RunID, env.NodeID, env.Driver, env.ProviderInstanceID = runID, nodeID, driverOf(instance), instance
 			return d, nil
 		}
 		var drafts []store.Draft
@@ -866,6 +884,10 @@ func (s *Server) respondRuntimeRequest(ctx context.Context, payload json.RawMess
 			if it.String("requestId") == cmd.RequestID {
 				item = it
 			}
+		}
+		if item != nil && driverOf(instance) == claudeDriver && status == "cancelled" && item.String("type") == "approval_request" {
+			// Upstream leaves a declined Claude approval item waiting.
+			item = nil
 		}
 		if item != nil {
 			var m map[string]any

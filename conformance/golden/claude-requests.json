@@ -1,0 +1,3026 @@
+{
+  "scenario": "claude-requests",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "archivedAt": null,
+          "autoPull": false,
+          "createdAt": "<time>",
+          "defaultModelSelection": null,
+          "defaultThreadEnvMode": null,
+          "deletedAt": null,
+          "faviconPath": null,
+          "id": "<uuid:project>",
+          "pinnedAt": null,
+          "projectIcon": null,
+          "repositoryIdentity": null,
+          "scripts": [],
+          "title": "workspace",
+          "updatedAt": "<time>",
+          "workspaceRoot": "<workspace>"
+        }
+      }
+    },
+    {
+      "step": 1,
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell"
+    },
+    {
+      "step": 2,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": 1,
+            "threads": []
+          }
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 2
+        }
+      }
+    },
+    {
+      "step": 4,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": 2,
+          "thread": {
+            "activeProviderThreadId": null,
+            "activeRunId": null,
+            "activityRunStartedAt": null,
+            "activityRunStatus": null,
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 0,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": null,
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": null,
+            "latestRunRequestedAt": null,
+            "latestRunStartedAt": null,
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": null,
+            "latestUserMessageAt": null,
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "claudeAgent",
+              "model": "claude-opus-5-5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": null,
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [],
+            "providerInstanceId": "claudeAgent",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "idle",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 0,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread"
+    },
+    {
+      "step": 6,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "kind": "snapshot",
+          "projection": {
+            "attempts": [],
+            "checkpointScopes": [],
+            "checkpoints": [],
+            "contextHandoffs": [],
+            "contextTransfers": [],
+            "messages": [],
+            "nodes": [],
+            "plans": [],
+            "providerSessions": [],
+            "providerThreads": [],
+            "providerTurns": [],
+            "runs": [],
+            "runtimeRequests": [],
+            "subagents": [],
+            "thread": {
+              "activeProviderThreadId": null,
+              "archivedAt": null,
+              "branch": null,
+              "createdAt": "<time>",
+              "createdBy": "user",
+              "creationSource": "web",
+              "deletedAt": null,
+              "forkedFrom": null,
+              "id": "<uuid:thread>",
+              "interactionMode": "default",
+              "lastVisitedAt": null,
+              "lineage": {
+                "parentThreadId": null,
+                "relationshipToParent": null,
+                "rootThreadId": "<uuid:thread>"
+              },
+              "modelSelection": {
+                "instanceId": "claudeAgent",
+                "model": "claude-opus-5-5"
+              },
+              "projectId": "<uuid:project>",
+              "providerInstanceId": "claudeAgent",
+              "pullRequests": [],
+              "runtimeMode": "approval-required",
+              "settledAt": null,
+              "settledOverride": null,
+              "snoozedAt": null,
+              "snoozedUntil": null,
+              "title": "First thread",
+              "updatedAt": "<time>",
+              "worktreePath": null
+            },
+            "turnItems": [],
+            "updatedAt": "<time>",
+            "visibleTurnItems": []
+          },
+          "snapshotSequence": 2
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "op": "call",
+      "as": "approve",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 10
+        }
+      }
+    },
+    {
+      "step": 8,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#2>",
+            "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "id": "turn-item:provider:claudeAgent:native-item:toolu_0004fake",
+              "input": "touch approved.txt",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+              "ordinal": 1000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "running",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 9,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#3>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request1>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "supportsFeedback": true,
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 10,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#5>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "ordinal": 1000003,
+              "parentItemId": null,
+              "prompt": "touch approved.txt",
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "requestId": "<var:request1>",
+              "requestKind": "command",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "waiting",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "approval_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 11,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": "<ignored>",
+          "thread": {
+            "activeProviderThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+            "activeRunId": "run:thread:<uuid:thread>:ordinal:1",
+            "activityRunStartedAt": "<time>",
+            "activityRunStatus": "running",
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 3,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": "<time>",
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": "run:thread:<uuid:thread>:ordinal:1",
+            "latestRunRequestedAt": "<time>",
+            "latestRunStartedAt": "<time>",
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": "<time>",
+            "latestUserMessageAt": "<time>",
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "claudeAgent",
+              "model": "claude-opus-5-5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": {
+              "blocking": true,
+              "createdAt": "<time>",
+              "id": "<var:request1>",
+              "kind": "command"
+            },
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [
+              "claudeAgent"
+            ],
+            "providerInstanceId": "claudeAgent",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "running",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 3,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 12,
+      "op": "call",
+      "as": "accept",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 28
+        }
+      }
+    },
+    {
+      "step": 13,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-accept>:<uuid#6>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "decision": "accept",
+              "id": "<var:request1>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "resolvedAt": "<time>",
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "supportsFeedback": true,
+                "type": "live"
+              },
+              "status": "resolved"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 14,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-accept>:<uuid#7>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+              "ordinal": 1000003,
+              "parentItemId": null,
+              "prompt": "touch approved.txt",
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "requestId": "<var:request1>",
+              "requestKind": "command",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "approval_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 15,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#8>",
+            "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:provider:claudeAgent:native-item:toolu_0004fake",
+              "input": "touch approved.txt",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0004fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+              "ordinal": 1000002,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+              "runId": "run:thread:<uuid:thread>:ordinal:1",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 16,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1:<uuid#9>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:1",
+              "modelSelection": {
+                "instanceId": "claudeAgent",
+                "model": "claude-opus-5-5"
+              },
+              "ordinal": 1,
+              "providerInstanceId": "claudeAgent",
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-approve>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:1",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 17,
+      "op": "call",
+      "as": "again",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 53
+        }
+      }
+    },
+    {
+      "step": 18,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#10>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request2>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0024fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "supportsFeedback": true,
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 19,
+      "op": "call",
+      "as": "decline",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 69
+        }
+      }
+    },
+    {
+      "step": 20,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-decline>:<uuid#12>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "decision": "decline",
+              "id": "<var:request2>",
+              "kind": "command",
+              "nativeRequestRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0024fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+              "resolvedAt": "<time>",
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "supportsFeedback": true,
+                "type": "live"
+              },
+              "status": "resolved"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 21,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#13>",
+            "nodeId": "node:provider:claudeAgent:native-item:toolu_0024fake",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:provider:claudeAgent:native-item:toolu_0024fake",
+              "input": "touch approved.txt",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0024fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:provider:claudeAgent:native-item:toolu_0024fake",
+              "ordinal": 2000002,
+              "outputOmitted": true,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+              "runId": "run:thread:<uuid:thread>:ordinal:2",
+              "startedAt": "<time>",
+              "status": "failed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "command_execution",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 22,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A2:<uuid#14>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:2",
+              "modelSelection": {
+                "instanceId": "claudeAgent",
+                "model": "claude-opus-5-5"
+              },
+              "ordinal": 2,
+              "providerInstanceId": "claudeAgent",
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-again>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:2",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 23,
+      "op": "call",
+      "as": "ask",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 93
+        }
+      }
+    },
+    {
+      "step": 24,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#15>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+            "occurredAt": "<time>",
+            "payload": {
+              "createdAt": "<time>",
+              "id": "<var:request3>",
+              "kind": "user_input",
+              "nativeRequestRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0044fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+              "resolvedAt": null,
+              "responseCapability": {
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "type": "live"
+              },
+              "status": "pending"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "runtime-request.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 25,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#17>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": null,
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0044fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+              "ordinal": 3000003,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+              "questions": [
+                {
+                  "header": "Color",
+                  "id": "Which color?",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "description": "Warm",
+                      "label": "Red"
+                    },
+                    {
+                      "description": "Cool",
+                      "label": "Blue"
+                    }
+                  ],
+                  "question": "Which color?"
+                }
+              ],
+              "requestId": "<var:request3>",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "startedAt": "<time>",
+              "status": "waiting",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "user_input_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 26,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "thread.updated",
+          "location": "active",
+          "sequence": "<ignored>",
+          "thread": {
+            "activeProviderThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+            "activeRunId": "run:thread:<uuid:thread>:ordinal:3",
+            "activityRunStartedAt": "<time>",
+            "activityRunStatus": "running",
+            "archivedAt": null,
+            "autoSettleDisabledAt": null,
+            "blockedOnThreadWait": false,
+            "branch": null,
+            "createdAt": "<time>",
+            "createdBy": "user",
+            "creationSource": "web",
+            "deletedAt": null,
+            "forkedFrom": null,
+            "goal": null,
+            "hasActionableProposedPlan": false,
+            "id": "<uuid:thread>",
+            "interactionMode": "default",
+            "itemCount": 13,
+            "lastError": null,
+            "lastErrorClass": null,
+            "lastErrorCode": null,
+            "lastTitleRegeneration": null,
+            "lastVisitedAt": "<time>",
+            "latestRunBackgroundWake": false,
+            "latestRunCompletedAt": null,
+            "latestRunId": "run:thread:<uuid:thread>:ordinal:3",
+            "latestRunRequestedAt": "<time>",
+            "latestRunStartedAt": "<time>",
+            "latestRunStopRequested": false,
+            "latestUserAuthoredMessageAt": "<time>",
+            "latestUserMessageAt": "<time>",
+            "latestVisibleMessage": null,
+            "limitRecovery": null,
+            "lineage": {
+              "parentThreadId": null,
+              "relationshipToParent": null,
+              "rootThreadId": "<uuid:thread>"
+            },
+            "modelSelection": {
+              "instanceId": "claudeAgent",
+              "model": "claude-opus-5-5"
+            },
+            "opens": null,
+            "pendingBackgroundTasks": [],
+            "pendingGuestMessageCount": 0,
+            "pendingRuntimeRequest": {
+              "blocking": true,
+              "createdAt": "<time>",
+              "id": "<var:request3>",
+              "kind": "user_input"
+            },
+            "pinOrderKey": null,
+            "pinnedAt": null,
+            "projectId": "<uuid:project>",
+            "providerInstanceHistory": [
+              "claudeAgent"
+            ],
+            "providerInstanceId": "claudeAgent",
+            "pullRequests": [],
+            "runtimeMode": "approval-required",
+            "settledAt": null,
+            "settledOverride": null,
+            "snoozedAt": null,
+            "snoozedUntil": null,
+            "status": "running",
+            "title": "First thread",
+            "titleRegeneration": null,
+            "unsettledAt": null,
+            "updatedAt": "<time>",
+            "usageLimitResetAt": null,
+            "visibleItemCount": 13,
+            "worktreePath": null
+          }
+        }
+      ]
+    },
+    {
+      "step": 27,
+      "op": "call",
+      "as": "answer",
+      "method": "orchestration.dispatchCommand",
+      "exit": {
+        "_tag": "Success",
+        "value": {
+          "sequence": 110
+        }
+      }
+    },
+    {
+      "step": 28,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:command:<uuid:cmd-answer>:<uuid#18>",
+            "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+            "occurredAt": "<time>",
+            "payload": {
+              "completedAt": "<time>",
+              "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+              "nativeItemRef": {
+                "driver": "claudeAgent",
+                "nativeId": "toolu_0044fake",
+                "strength": "strong"
+              },
+              "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+              "ordinal": 3000003,
+              "parentItemId": null,
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+              "questionAnswer": {
+                "answers": {
+                  "Which color?": "Red"
+                },
+                "attachmentsByQuestionId": {},
+                "questionTextById": {
+                  "Which color?": "Which color?"
+                },
+                "requestId": "<var:request3>"
+              },
+              "questions": [
+                {
+                  "header": "Color",
+                  "id": "Which color?",
+                  "multiSelect": false,
+                  "options": [
+                    {
+                      "description": "Warm",
+                      "label": "Red"
+                    },
+                    {
+                      "description": "Cool",
+                      "label": "Blue"
+                    }
+                  ],
+                  "question": "Which color?"
+                }
+              ],
+              "requestId": "<var:request3>",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "title": null,
+              "type": "user_input_request",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "turn-item.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 29,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "driver": "claudeAgent",
+            "id": "event:thread:<uuid:thread>:provider-session:provider-session%3Aprovider-instance%3AclaudeAgent%3Athread%3A<uuid:thread>%3A<uuid#1>:<uuid#19>",
+            "nodeId": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+            "occurredAt": "<time>",
+            "payload": {
+              "attachments": [],
+              "createdAt": "<time>",
+              "createdBy": "agent",
+              "creationSource": "provider",
+              "id": "message:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+              "nodeId": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+              "role": "assistant",
+              "runId": "run:thread:<uuid:thread>:ordinal:3",
+              "streaming": false,
+              "text": "fake claude reply to: ask a question",
+              "threadId": "<uuid:thread>",
+              "updatedAt": "<time>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "message.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 30,
+      "op": "await",
+      "as": "thread",
+      "values": [
+        {
+          "event": {
+            "id": "event:thread:<uuid:thread>:command:command%3Aeffect%3Acheckpoint.capture%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A3:<uuid#20>",
+            "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+            "occurredAt": "<time>",
+            "payload": {
+              "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+              "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+              "completedAt": "<time>",
+              "contextHandoffId": null,
+              "id": "run:thread:<uuid:thread>:ordinal:3",
+              "modelSelection": {
+                "instanceId": "claudeAgent",
+                "model": "claude-opus-5-5"
+              },
+              "ordinal": 3,
+              "providerInstanceId": "claudeAgent",
+              "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "queuePosition": null,
+              "requestedAt": "<time>",
+              "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+              "startedAt": "<time>",
+              "status": "completed",
+              "threadId": "<uuid:thread>",
+              "userMessageId": "<uuid:cmd-ask>"
+            },
+            "providerInstanceId": "claudeAgent",
+            "runId": "run:thread:<uuid:thread>:ordinal:3",
+            "threadId": "<uuid:thread>",
+            "type": "run.updated"
+          },
+          "kind": "event",
+          "sequence": "<ignored>"
+        }
+      ]
+    },
+    {
+      "step": 31,
+      "op": "interrupt",
+      "as": "thread",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    },
+    {
+      "step": 32,
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread"
+    },
+    {
+      "step": 33,
+      "op": "await",
+      "as": "after",
+      "values": [
+        {
+          "kind": "snapshot",
+          "projection": {
+            "attempts": [
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "nativeThreadId": "<uuid#21>",
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed"
+              },
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "nativeThreadId": "<uuid#21>",
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed"
+              },
+              {
+                "attemptOrdinal": 1,
+                "completedAt": "<time>",
+                "id": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "nativeThreadId": "<uuid#21>",
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "reason": "initial",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed"
+              }
+            ],
+            "checkpointScopes": [
+              {
+                "advancesAppRunCount": true,
+                "createdAt": "<time>",
+                "cwd": "<workspace>",
+                "id": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "kind": "root_run",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinalWithinParent": 0,
+                "parentScopeId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "checkpoints": [
+              {
+                "appRunOrdinal": null,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:0",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinalWithinScope": 0,
+                "parentCheckpointId": null,
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/0",
+                "runId": null,
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 1,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinalWithinScope": 1,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:0",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 2,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinalWithinScope": 2,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/2",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "appRunOrdinal": 3,
+                "capturedAt": "<time>",
+                "files": [],
+                "id": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinalWithinScope": 3,
+                "parentCheckpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "ref": "refs/t3/orchestration-v2/checkpoints/<scope-key>/ordinal/3",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "status": "ready",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "contextHandoffs": [],
+            "contextTransfers": [],
+            "messages": [
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-approve>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "streaming": false,
+                "text": "approve this",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "streaming": false,
+                "text": "fake claude reply to: approve this",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-again>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "streaming": false,
+                "text": "approve again",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "streaming": false,
+                "text": "fake claude reply to: approve again",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "<uuid:cmd-ask>",
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "role": "user",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "streaming": false,
+                "text": "ask a question",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "createdAt": "<time>",
+                "createdBy": "agent",
+                "creationSource": "provider",
+                "id": "message:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "role": "assistant",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "streaming": false,
+                "text": "fake claude reply to: ask a question",
+                "threadId": "<uuid:thread>",
+                "updatedAt": "<time>"
+              }
+            ],
+            "nodes": [
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:toolu_0004fake",
+                "kind": "tool_call",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0004fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                "kind": "approval_request",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0004fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": "<var:request1>",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0013fake:text:0",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:toolu_0024fake",
+                "kind": "tool_call",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0024fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "failed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                "kind": "approval_request",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0024fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:provider:claudeAgent:native-item:toolu_0024fake",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": "<var:request2>",
+                "startedAt": "<time>",
+                "status": "cancelled",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0033fake:text:0",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "completedAt": "<time>",
+                "countsForRun": true,
+                "id": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "kind": "root_turn",
+                "nativeItemRef": null,
+                "parentNodeId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:toolu_0044fake",
+                "kind": "tool_call",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0044fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                "kind": "user_input_request",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0044fake",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:provider:claudeAgent:native-item:toolu_0044fake",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": "<var:request3>",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              },
+              {
+                "checkpointScopeId": null,
+                "completedAt": "<time>",
+                "countsForRun": false,
+                "id": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "kind": "assistant_message",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0053fake:text:0",
+                  "strength": "strong"
+                },
+                "parentNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "runtimeRequestId": null,
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>"
+              }
+            ],
+            "plans": [],
+            "providerSessions": [
+              {
+                "capabilities": {
+                  "approvals": {
+                    "approvalCallbacksAreLiveOnly": true,
+                    "approvalsCanOriginateFromSubagents": false,
+                    "approvalsHaveNativeRequestIds": true,
+                    "supportsApplyPatchApproval": false,
+                    "supportsCommandApproval": true,
+                    "supportsFileChangeApproval": true,
+                    "supportsFileReadApproval": true
+                  },
+                  "checkpointing": {
+                    "appCanCheckpointFilesystem": true,
+                    "providerCanReadConversationSnapshot": false,
+                    "providerCanRollbackConversation": true,
+                    "providerRollbackReturnsSnapshot": true,
+                    "supportsNestedCheckpointScopes": true
+                  },
+                  "context": {
+                    "acceptsDeveloperContext": true,
+                    "acceptsSyntheticUserContext": true,
+                    "acceptsSystemContext": true,
+                    "canConsumeHandoffSummaries": true,
+                    "canGenerateSummaries": true,
+                    "maxRecommendedHandoffChars": null,
+                    "supportsDeltaHandoff": true,
+                    "supportsFullThreadHandoff": true
+                  },
+                  "identity": {
+                    "nativeItemIds": "strong",
+                    "nativeRequestIds": "strong",
+                    "nativeThreadIds": "strong",
+                    "nativeTurnIds": "weak"
+                  },
+                  "planning": {
+                    "emitsPlanUpdated": true,
+                    "emitsProposedPlan": true,
+                    "emitsTodoList": true,
+                    "planDeltasHaveItemIds": false,
+                    "supportsStructuredQuestions": true
+                  },
+                  "runtimePolicy": {
+                    "enforcement": "native"
+                  },
+                  "sessions": {
+                    "pendingRequestsSurviveRestart": false,
+                    "supportsModelSwitchInSession": true,
+                    "supportsMultipleProviderThreadsPerSession": false,
+                    "supportsProviderSwitchingViaHandoff": true,
+                    "supportsRuntimeModeSwitchInSession": false
+                  },
+                  "streaming": {
+                    "emitsMessageCompleted": true,
+                    "streamsAssistantText": true,
+                    "streamsPlanText": false,
+                    "streamsReasoning": true,
+                    "streamsToolOutput": false
+                  },
+                  "subagents": {
+                    "canCloseSubagents": false,
+                    "canForkSubagentThread": false,
+                    "canWaitForSubagents": false,
+                    "emitsSubagentLifecycle": true,
+                    "exposesSubagentThreadIds": false,
+                    "supportsSubagents": true
+                  },
+                  "threads": {
+                    "canCreateEmptyThread": true,
+                    "canForkFromSubagentThread": false,
+                    "canForkFromTurn": true,
+                    "canForkThread": true,
+                    "canForkWhileSourceRunning": true,
+                    "canReadThreadSnapshot": false,
+                    "canRollbackThread": true,
+                    "exposesNativeThreadId": true
+                  },
+                  "tools": {
+                    "emitsToolCompleted": true,
+                    "emitsToolOutput": true,
+                    "emitsToolStarted": true,
+                    "exposesToolItemIds": true,
+                    "supportsDynamicToolCallbacks": true,
+                    "supportsMcpTools": true
+                  },
+                  "turns": {
+                    "activeSteeringInterruptsTools": false,
+                    "emitsTurnCompleted": true,
+                    "emitsTurnStarted": true,
+                    "exposesNativeTurnId": false,
+                    "supportsActiveSteering": true,
+                    "supportsInterrupt": true,
+                    "supportsNativeResume": true,
+                    "supportsQueuedMessages": true,
+                    "supportsSteeringByInterruptRestart": false,
+                    "terminalStatusQuality": "strong"
+                  }
+                },
+                "createdAt": "<time>",
+                "cwd": "<workspace>",
+                "driver": "claudeAgent",
+                "extensionStatuses": [],
+                "id": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "lastError": null,
+                "model": "claude-opus-5-5",
+                "providerInstanceId": "claudeAgent",
+                "status": "ready",
+                "updatedAt": "<time>"
+              }
+            ],
+            "providerThreads": [
+              {
+                "appThreadId": "<uuid:thread>",
+                "contextUsage": {
+                  "maxTokens": 1000000,
+                  "usedTokens": 15
+                },
+                "createdAt": "<time>",
+                "driver": "claudeAgent",
+                "firstRunOrdinal": 1,
+                "forkedFrom": null,
+                "goal": null,
+                "handoffIds": [],
+                "id": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "lastRunOrdinal": 3,
+                "nativeConversationHeadRef": null,
+                "nativeMetadata": {
+                  "claudeAttachmentBudget": {
+                    "bytesUsed": 45,
+                    "pagesUsed": 0
+                  },
+                  "title": "First thread"
+                },
+                "nativeThreadRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "<uuid#21>",
+                  "strength": "strong"
+                },
+                "ownerNodeId": null,
+                "pendingBackgroundTasks": [],
+                "providerInstanceId": "claudeAgent",
+                "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                "status": "idle",
+                "updatedAt": "<time>"
+              }
+            ],
+            "providerTurns": [
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "model": "claude-opus-5-5",
+                "nativeTurnRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "<uuid#22>",
+                  "strength": "weak"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "tokenUsage": {
+                  "autoCompactThreshold": 467000,
+                  "cachedInputTokens": 0,
+                  "inputTokens": 10,
+                  "maxTokens": 1000000,
+                  "outputTokens": 5,
+                  "reasoningOutputTokens": 0,
+                  "updatedAt": "<time>",
+                  "usedTokens": 15
+                },
+                "turnTokenUsage": {
+                  "cacheCreationTokens": 0,
+                  "cachedInputTokens": 0,
+                  "hasSubagents": false,
+                  "inputTokens": 10,
+                  "models": [
+                    "claude-opus-5-5"
+                  ],
+                  "outputTokens": 5,
+                  "usageScope": "main_agent",
+                  "usageStatus": "complete"
+                }
+              },
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "model": "claude-opus-5-5",
+                "nativeTurnRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "<uuid#23>",
+                  "strength": "weak"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "tokenUsage": {
+                  "autoCompactThreshold": 467000,
+                  "cachedInputTokens": 0,
+                  "inputTokens": 10,
+                  "maxTokens": 1000000,
+                  "outputTokens": 5,
+                  "reasoningOutputTokens": 0,
+                  "updatedAt": "<time>",
+                  "usedTokens": 15
+                },
+                "turnTokenUsage": {
+                  "cacheCreationTokens": 0,
+                  "cachedInputTokens": 0,
+                  "hasSubagents": false,
+                  "inputTokens": 10,
+                  "models": [
+                    "claude-opus-5-5"
+                  ],
+                  "outputTokens": 5,
+                  "usageScope": "main_agent",
+                  "usageStatus": "complete"
+                }
+              },
+              {
+                "completedAt": "<time>",
+                "id": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "model": "claude-opus-5-5",
+                "nativeTurnRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "<uuid#24>",
+                  "strength": "weak"
+                },
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "runAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "tokenUsage": {
+                  "autoCompactThreshold": 467000,
+                  "cachedInputTokens": 0,
+                  "inputTokens": 10,
+                  "maxTokens": 1000000,
+                  "outputTokens": 5,
+                  "reasoningOutputTokens": 0,
+                  "updatedAt": "<time>",
+                  "usedTokens": 15
+                },
+                "turnTokenUsage": {
+                  "cacheCreationTokens": 0,
+                  "cachedInputTokens": 0,
+                  "hasSubagents": false,
+                  "inputTokens": 10,
+                  "models": [
+                    "claude-opus-5-5"
+                  ],
+                  "outputTokens": 5,
+                  "usageScope": "main_agent",
+                  "usageStatus": "complete"
+                }
+              }
+            ],
+            "runs": [
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:1",
+                "modelSelection": {
+                  "instanceId": "claudeAgent",
+                  "model": "claude-opus-5-5"
+                },
+                "ordinal": 1,
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-approve>"
+              },
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:2",
+                "modelSelection": {
+                  "instanceId": "claudeAgent",
+                  "model": "claude-opus-5-5"
+                },
+                "ordinal": 2,
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-again>"
+              },
+              {
+                "activeAttemptId": "run-attempt:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:attempt:1",
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "completedAt": "<time>",
+                "contextHandoffId": null,
+                "id": "run:thread:<uuid:thread>:ordinal:3",
+                "modelSelection": {
+                  "instanceId": "claudeAgent",
+                  "model": "claude-opus-5-5"
+                },
+                "ordinal": 3,
+                "providerInstanceId": "claudeAgent",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "queuePosition": null,
+                "requestedAt": "<time>",
+                "rootNodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "userMessageId": "<uuid:cmd-ask>"
+              }
+            ],
+            "runtimeRequests": [
+              {
+                "createdAt": "<time>",
+                "decision": "accept",
+                "id": "<var:request1>",
+                "kind": "command",
+                "nativeRequestRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0004fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                  "supportsFeedback": true,
+                  "type": "live"
+                },
+                "status": "resolved"
+              },
+              {
+                "createdAt": "<time>",
+                "decision": "decline",
+                "id": "<var:request2>",
+                "kind": "command",
+                "nativeRequestRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0024fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                  "supportsFeedback": true,
+                  "type": "live"
+                },
+                "status": "resolved"
+              },
+              {
+                "answers": {
+                  "Which color?": "Red"
+                },
+                "createdAt": "<time>",
+                "id": "<var:request3>",
+                "kind": "user_input",
+                "nativeRequestRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0044fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "resolvedAt": "<time>",
+                "responseCapability": {
+                  "providerSessionId": "provider-session:provider-instance:claudeAgent:thread:<uuid:thread>:<uuid#1>",
+                  "type": "live"
+                },
+                "status": "resolved"
+              }
+            ],
+            "subagents": [],
+            "thread": {
+              "activeProviderThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+              "archivedAt": null,
+              "branch": null,
+              "createdAt": "<time>",
+              "createdBy": "user",
+              "creationSource": "web",
+              "deletedAt": null,
+              "forkedFrom": null,
+              "id": "<uuid:thread>",
+              "interactionMode": "default",
+              "lastVisitedAt": "<time>",
+              "lineage": {
+                "parentThreadId": null,
+                "relationshipToParent": null,
+                "rootThreadId": "<uuid:thread>"
+              },
+              "modelSelection": {
+                "instanceId": "claudeAgent",
+                "model": "claude-opus-5-5"
+              },
+              "projectId": "<uuid:project>",
+              "providerInstanceId": "claudeAgent",
+              "pullRequests": [],
+              "runtimeMode": "approval-required",
+              "settledAt": null,
+              "settledOverride": null,
+              "snoozedAt": null,
+              "snoozedUntil": null,
+              "title": "First thread",
+              "updatedAt": "<time>",
+              "worktreePath": null
+            },
+            "turnItems": [
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-approve>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-approve>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "approve this",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:toolu_0004fake",
+                "input": "touch approved.txt",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0004fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+                "ordinal": 1000002,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "command_execution",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0004fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                "ordinal": 1000003,
+                "parentItemId": null,
+                "prompt": "touch approved.txt",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "requestId": "<var:request1>",
+                "requestKind": "command",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "approval_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "messageId": "message:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0013fake:text:0",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "ordinal": 1000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake claude reply to: approve this",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                "ordinal": 1000005,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:1",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-again>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-again>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "approve again",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:toolu_0024fake",
+                "input": "touch approved.txt",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0024fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:toolu_0024fake",
+                "ordinal": 2000002,
+                "outputOmitted": true,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "failed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "command_execution",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": null,
+                "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0024fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                "ordinal": 2000003,
+                "parentItemId": null,
+                "prompt": "touch approved.txt",
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "requestId": "<var:request2>",
+                "requestKind": "command",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "waiting",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "approval_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "messageId": "message:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0033fake:text:0",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "ordinal": 2000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake claude reply to: approve again",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                "ordinal": 2000005,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:2",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              },
+              {
+                "attachments": [],
+                "completedAt": "<time>",
+                "createdBy": "user",
+                "creationSource": "web",
+                "id": "turn-item:message:<uuid:cmd-ask>",
+                "inputIntent": "turn_start",
+                "messageId": "<uuid:cmd-ask>",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3000001,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "text": "ask a question",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:toolu_0044fake",
+                "input": {
+                  "questions": [
+                    {
+                      "header": "Color",
+                      "multiSelect": false,
+                      "options": [
+                        {
+                          "description": "Warm",
+                          "label": "Red"
+                        },
+                        {
+                          "description": "Cool",
+                          "label": "Blue"
+                        }
+                      ],
+                      "question": "Which color?"
+                    }
+                  ]
+                },
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0044fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:toolu_0044fake",
+                "ordinal": 3000002,
+                "outputOmitted": true,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "toolName": "AskUserQuestion",
+                "type": "dynamic_tool",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "toolu_0044fake",
+                  "strength": "strong"
+                },
+                "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                "ordinal": 3000003,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "questionAnswer": {
+                  "answers": {
+                    "Which color?": "Red"
+                  },
+                  "attachmentsByQuestionId": {},
+                  "questionTextById": {
+                    "Which color?": "Which color?"
+                  },
+                  "requestId": "<var:request3>"
+                },
+                "questions": [
+                  {
+                    "header": "Color",
+                    "id": "Which color?",
+                    "multiSelect": false,
+                    "options": [
+                      {
+                        "description": "Warm",
+                        "label": "Red"
+                      },
+                      {
+                        "description": "Cool",
+                        "label": "Blue"
+                      }
+                    ],
+                    "question": "Which color?"
+                  }
+                ],
+                "requestId": "<var:request3>",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "user_input_request",
+                "updatedAt": "<time>"
+              },
+              {
+                "completedAt": "<time>",
+                "id": "turn-item:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "messageId": "message:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "nativeItemRef": {
+                  "driver": "claudeAgent",
+                  "nativeId": "msg_0053fake:text:0",
+                  "strength": "strong"
+                },
+                "nodeId": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "ordinal": 3000004,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "startedAt": "<time>",
+                "status": "completed",
+                "streaming": false,
+                "text": "fake claude reply to: ask a question",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "assistant_message",
+                "updatedAt": "<time>"
+              },
+              {
+                "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                "completedAt": "<time>",
+                "files": [],
+                "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                "nativeItemRef": null,
+                "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                "ordinal": 3000005,
+                "parentItemId": null,
+                "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                "providerTurnId": null,
+                "runId": "run:thread:<uuid:thread>:ordinal:3",
+                "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                "startedAt": "<time>",
+                "status": "completed",
+                "threadId": "<uuid:thread>",
+                "title": null,
+                "type": "checkpoint",
+                "updatedAt": "<time>"
+              }
+            ],
+            "updatedAt": "<time>",
+            "visibleTurnItems": [
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-approve>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-approve>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                  "ordinal": 1000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "approve this",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 0,
+                "sourceItemId": "turn-item:message:<uuid:cmd-approve>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:toolu_0004fake",
+                  "input": "touch approved.txt",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0004fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:toolu_0004fake",
+                  "ordinal": 1000002,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "command_execution",
+                  "updatedAt": "<time>"
+                },
+                "position": 1,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:toolu_0004fake",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0004fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                  "ordinal": 1000003,
+                  "parentItemId": null,
+                  "prompt": "touch approved.txt",
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                  "requestId": "<var:request1>",
+                  "requestKind": "command",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "approval_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 2,
+                "sourceItemId": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A1%25253Aattempt%25253A1%3Anative-request%3Atoolu_0004fake%3A<uuid#4>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                  "messageId": "message:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "msg_0013fake:text:0",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                  "ordinal": 1000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A1%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake claude reply to: approve this",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 3,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:msg_0013fake%3Atext%3A0",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:1",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A1:root",
+                  "ordinal": 1000005,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:1",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 4,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A1",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-again>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-again>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                  "ordinal": 2000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "approve again",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 5,
+                "sourceItemId": "turn-item:message:<uuid:cmd-again>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:toolu_0024fake",
+                  "input": "touch approved.txt",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0024fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:toolu_0024fake",
+                  "ordinal": 2000002,
+                  "outputOmitted": true,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "failed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "command_execution",
+                  "updatedAt": "<time>"
+                },
+                "position": 6,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:toolu_0024fake",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": null,
+                  "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0024fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                  "ordinal": 2000003,
+                  "parentItemId": null,
+                  "prompt": "touch approved.txt",
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                  "requestId": "<var:request2>",
+                  "requestKind": "command",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "waiting",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "approval_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 7,
+                "sourceItemId": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A2%25253Aattempt%25253A1%3Anative-request%3Atoolu_0024fake%3A<uuid#11>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                  "messageId": "message:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "msg_0033fake:text:0",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                  "ordinal": 2000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A2%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake claude reply to: approve again",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 8,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:msg_0033fake%3Atext%3A0",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:2",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A2:root",
+                  "ordinal": 2000005,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:2",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 9,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A2",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "attachments": [],
+                  "completedAt": "<time>",
+                  "createdBy": "user",
+                  "creationSource": "web",
+                  "id": "turn-item:message:<uuid:cmd-ask>",
+                  "inputIntent": "turn_start",
+                  "messageId": "<uuid:cmd-ask>",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                  "ordinal": 3000001,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "text": "ask a question",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 10,
+                "sourceItemId": "turn-item:message:<uuid:cmd-ask>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:toolu_0044fake",
+                  "input": {
+                    "questions": [
+                      {
+                        "header": "Color",
+                        "multiSelect": false,
+                        "options": [
+                          {
+                            "description": "Warm",
+                            "label": "Red"
+                          },
+                          {
+                            "description": "Cool",
+                            "label": "Blue"
+                          }
+                        ],
+                        "question": "Which color?"
+                      }
+                    ]
+                  },
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0044fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:toolu_0044fake",
+                  "ordinal": 3000002,
+                  "outputOmitted": true,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "toolName": "AskUserQuestion",
+                  "type": "dynamic_tool",
+                  "updatedAt": "<time>"
+                },
+                "position": 11,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:toolu_0044fake",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "toolu_0044fake",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                  "ordinal": 3000003,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                  "questionAnswer": {
+                    "answers": {
+                      "Which color?": "Red"
+                    },
+                    "attachmentsByQuestionId": {},
+                    "questionTextById": {
+                      "Which color?": "Which color?"
+                    },
+                    "requestId": "<var:request3>"
+                  },
+                  "questions": [
+                    {
+                      "header": "Color",
+                      "id": "Which color?",
+                      "multiSelect": false,
+                      "options": [
+                        {
+                          "description": "Warm",
+                          "label": "Red"
+                        },
+                        {
+                          "description": "Cool",
+                          "label": "Blue"
+                        }
+                      ],
+                      "question": "Which color?"
+                    }
+                  ],
+                  "requestId": "<var:request3>",
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "user_input_request",
+                  "updatedAt": "<time>"
+                },
+                "position": 12,
+                "sourceItemId": "turn-item:runtime-request:runtime-request%3Aprovider%3AclaudeAgent%3Aprovider-turn%3Aprovider-turn%253Aprovider%253AclaudeAgent%253Anative-turn%253Aturn%25253Arun-attempt%25253Arun%25253Arun%2525253Athread%2525253A<uuid:thread>%2525253Aordinal%2525253A3%25253Aattempt%25253A1%3Anative-request%3Atoolu_0044fake%3A<uuid#16>",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "completedAt": "<time>",
+                  "id": "turn-item:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                  "messageId": "message:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                  "nativeItemRef": {
+                    "driver": "claudeAgent",
+                    "nativeId": "msg_0053fake:text:0",
+                    "strength": "strong"
+                  },
+                  "nodeId": "node:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                  "ordinal": 3000004,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": "provider-turn:provider:claudeAgent:native-turn:turn%3Arun-attempt%3Arun%3Arun%253Athread%253A<uuid:thread>%253Aordinal%253A3%3Aattempt%3A1",
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "streaming": false,
+                  "text": "fake claude reply to: ask a question",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "assistant_message",
+                  "updatedAt": "<time>"
+                },
+                "position": 13,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:msg_0053fake%3Atext%3A0",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              },
+              {
+                "item": {
+                  "checkpointId": "checkpoint:scope:checkpoint-scope%3Athread%3A<uuid:thread>%3Aname%3Aroot:name:3",
+                  "completedAt": "<time>",
+                  "files": [],
+                  "id": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                  "nativeItemRef": null,
+                  "nodeId": "node:run:run%3Athread%3A<uuid:thread>%3Aordinal%3A3:root",
+                  "ordinal": 3000005,
+                  "parentItemId": null,
+                  "providerThreadId": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3A<uuid:thread>%3Aordinal%3A1",
+                  "providerTurnId": null,
+                  "runId": "run:thread:<uuid:thread>:ordinal:3",
+                  "scopeId": "checkpoint-scope:thread:<uuid:thread>:name:root",
+                  "startedAt": "<time>",
+                  "status": "completed",
+                  "threadId": "<uuid:thread>",
+                  "title": null,
+                  "type": "checkpoint",
+                  "updatedAt": "<time>"
+                },
+                "position": 14,
+                "sourceItemId": "turn-item:provider:claudeAgent:native-item:checkpoint%3Acheckpoint%3Ascope%3Acheckpoint-scope%253Athread%253A<uuid:thread>%253Aname%253Aroot%3Aname%3A3",
+                "sourceThreadId": "<uuid:thread>",
+                "visibility": "local"
+              }
+            ]
+          },
+          "snapshotSequence": 127
+        }
+      ]
+    },
+    {
+      "step": 34,
+      "op": "interrupt",
+      "as": "after",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    },
+    {
+      "step": 35,
+      "op": "await",
+      "as": "shell",
+      "values": [
+        {
+          "kind": "snapshot",
+          "resolvedRepositoryIdentityRoots": [
+            "<workspace>"
+          ],
+          "snapshot": {
+            "archivedThreads": [],
+            "projects": [
+              {
+                "archivedAt": null,
+                "autoPull": false,
+                "createdAt": "<time>",
+                "defaultModelSelection": null,
+                "defaultThreadEnvMode": null,
+                "faviconPath": null,
+                "hasCustomTitle": false,
+                "id": "<uuid:project>",
+                "pinnedAt": null,
+                "projectIcon": null,
+                "repositoryIdentity": null,
+                "scripts": [],
+                "title": "workspace",
+                "updatedAt": "<time>",
+                "workspaceRoot": "<workspace>"
+              }
+            ],
+            "schemaVersion": 2,
+            "snapshotSequence": "<ignored>",
+            "threads": "<ignored>"
+          }
+        }
+      ]
+    },
+    {
+      "step": 36,
+      "op": "interrupt",
+      "as": "shell",
+      "exit": {
+        "_tag": "Failure",
+        "cause": [
+          {
+            "_tag": "Interrupt",
+            "fiberId": "<fiberId>"
+          }
+        ]
+      }
+    }
+  ]
+}

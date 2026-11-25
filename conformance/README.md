@@ -51,6 +51,8 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 - `T3CONFORM_TRACE=<파일>`을 지정하면 러너가 받은 스트림 값을 모두 그 파일에 적습니다. 새 시나리오를 작성할 때 씁니다.
 - `codex exec`(제목 생성)와 `codex mcp list`는 지원하지 않고 종료 코드 2로 끝납니다. 업스트림은 이 실패를 경고로만 남깁니다.
 
+같은 폴더의 `claude`는 `fixtures/fake-claude.mjs`입니다. Claude Agent SDK가 쓰는 stream-json 프로토콜을 말하고, 사용자 메시지에 `fake claude reply to: <입력>`을 한 텍스트 블록으로 스트리밍한 뒤 `result`로 턴을 끝냅니다. 입력이 `tools`로 시작하면 thinking, Bash 호출, Write 호출(작업 폴더에 `hello.txt`를 실제로 씁니다)을 보내고, `approve`는 Bash 호출 전에, `ask`는 AskUserQuestion 호출 전에 `can_use_tool` 요청으로 허락을 구하며, `wait`는 `interrupt` 제어 요청이 올 때까지 기다리고, `slow`는 1초 뒤에 답합니다. 업스트림은 로그인 셸의 `PATH`를 자신의 `PATH`보다 앞에 두기 때문에, 기계에 실제 `claude`가 있으면 그쪽을 실행합니다. 그래서 러너는 데이터 폴더의 `userdata/settings.json`에 `claudeAgent` 인스턴스의 `binaryPath`로 이 픽스처를 적어 둡니다(yatt-server는 이 파일을 읽지 않습니다). 주고받은 메시지는 실행 폴더의 `fake-claude.log`에 남습니다.
+
 체크포인트 ref(`refs/t3/orchestration-v2/checkpoints/<키>/ordinal/<n>`)의 키는 `base64url(hex(sha256(scopeId))[:32])`이고 scopeId에 스레드 id가 들어가므로, 기록할 때는 `<scope-key>`로 바뀝니다.
 
 업스트림에서도 스트림 안의 위치가 타이밍에 따라 달라지는 값은 `subscribe`의 `aside`에 패턴으로 적습니다. 이 패턴과 일치하는 값은 다른 값과 따로 모이고, `fromAside: true`인 `await`만 그 값을 확인합니다. 패턴의 `"$present"`는 값이 있기만 하면 일치합니다. 지금은 SHELL-8의 저장소 식별 스냅샷에 씁니다.
