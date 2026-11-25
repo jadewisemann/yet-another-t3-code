@@ -37,6 +37,7 @@ jobs:
           cd tools/spec-extract
           bun install --frozen-lockfile
           bun extract.ts "$RUNNER_TEMP/upstream" ../../spec/generated
+          bun extract-codex.ts "$RUNNER_TEMP/upstream" ../../spec/generated
           git diff --stat --exit-code -- ../../spec/generated
 
   conformance:
