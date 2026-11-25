@@ -25,6 +25,8 @@ actions!(
     [
         /// Start a new thread in the current project.
         NewThread,
+        /// Choose a folder to add as a project.
+        AddProject,
         /// Rename the open thread.
         RenameThread,
         /// Open the next thread in the sidebar.
@@ -56,6 +58,7 @@ actions!(
 pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
     vec![
         ("New thread", Box::new(NewThread)),
+        ("Add project", Box::new(AddProject)),
         ("Rename thread", Box::new(RenameThread)),
         ("Next thread", Box::new(NextThread)),
         ("Previous thread", Box::new(PreviousThread)),
@@ -98,6 +101,7 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-shift-r", RenameThread, Some("Workspace")),
         KeyBinding::new("f2", RenameThread, Some("Workspace")),
         KeyBinding::new("secondary-n", NewThread, Some("Workspace")),
+        KeyBinding::new("secondary-shift-o", AddProject, Some("Workspace")),
         KeyBinding::new("alt-down", NextThread, Some("Workspace")),
         KeyBinding::new("alt-up", PreviousThread, Some("Workspace")),
         KeyBinding::new("secondary-]", NextThread, Some("Workspace")),

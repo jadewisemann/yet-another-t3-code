@@ -2,7 +2,7 @@
 
 (예전 이름은 YAT3입니다. 이미 `yat3` cask를 설치했다면 `brew update && brew upgrade`로 `yatt`로 옮겨지고, 설정 폴더도 처음 실행할 때 옮겨집니다.)
 
-[T3 Code](https://github.com/pingdotgg/t3code)의 서버는 그대로 사용하고, 화면만 [GPUI](https://www.gpui.rs/)(Zed의 Rust UI 프레임워크)로 다시 만든 네이티브 클라이언트입니다. 에이전트 실행, 스레드 저장, 프로바이더 연결은 모두 T3 Code 서버가 처리하며, 이 앱은 그 서버의 WebSocket RPC에 접속해서 스레드를 보여 주고 명령을 보냅니다.
+[T3 Code](https://github.com/pingdotgg/t3code)를 [GPUI](https://www.gpui.rs/)(Zed의 Rust UI 프레임워크)로 다시 만든 네이티브 클라이언트입니다. 에이전트 실행, 스레드 저장, 프로바이더 연결은 T3 Code 서버를 Go로 옮긴 `yatt-server`(`server/`)가 처리하며, 이 서버가 앱 안에 들어 있습니다. 앱은 서버의 WebSocket RPC에 접속해서 스레드를 보여 주고 명령을 보냅니다. 서버는 T3 Code와 같은 프로토콜을 쓰므로, 다른 컴퓨터에서 실행 중인 T3 Code 서버에도 연결할 수 있습니다.
 
 | 라이트 | 다크 |
 |---|---|
@@ -10,9 +10,10 @@
 
 ## 현재 되는 것
 
+- 프로젝트 추가 (사이드바의 Add 버튼이나 `Cmd-Shift-O`로 폴더 선택)
 - 프로젝트별 스레드 목록 (진행 중인 스레드와 답변을 기다리는 스레드는 점으로 표시)
 - 대화 보기와 실시간 스트리밍, 메시지 보내기 (실행 중이면 대기열에 추가)
-- 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용)
+- 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용하고, 처음에는 Codex 기본 모델을 사용). 제목은 첫 메시지를 보고 Codex가 지어 줍니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
 - 실행 중지, 스레드 보관
 - 단축키와 색상, 글꼴을 설정 파일로 변경 (재시작 없이 다시 불러오기 가능)
@@ -28,35 +29,35 @@ brew tap jadewisemann/yatt https://github.com/jadewisemann/yet-another-t3-code
 brew install --cask yatt
 ```
 
-Homebrew 설치만으로 끝나며, T3 Code 앱이나 Node.js를 따로 설치할 필요가 없습니다. 업데이트는 `brew upgrade --cask yatt`로 합니다. 설치하면 `/Applications/YATT.app`과 터미널용 `yatt` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
+Homebrew 설치만으로 끝나며, T3 Code 앱이나 Node.js를 따로 설치할 필요가 없습니다. 에이전트로 쓸 Codex CLI(`codex`)는 따로 설치되어 있어야 합니다. 업데이트는 `brew upgrade --cask yatt`로 합니다. 설치하면 `/Applications/YATT.app`과 터미널용 `yatt` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
 
 새 버전은 `Cargo.toml`의 `version`을 올려 main에 병합하면 배포됩니다. `Release` 워크플로가 macOS 앱을 빌드해 GitHub Release를 만들고, `Casks/yatt.rb`의 버전과 sha256을 자동으로 갱신합니다.
 
 ### 직접 빌드
 
-Rust stable과 Xcode Command Line Tools가 있으면 됩니다. (Metal 셰이더를 실행 시점에 컴파일하므로 Xcode 전체는 필요하지 않습니다.)
+Rust stable, Go(버전은 `server/go.mod`), Xcode Command Line Tools가 있으면 됩니다. (Metal 셰이더를 실행 시점에 컴파일하므로 Xcode 전체는 필요하지 않습니다.)
 
 ```sh
 cargo build --release
-scripts/bundle-macos.sh        # target/release/YATT.app 생성
+scripts/bundle-macos.sh        # yatt-server를 빌드해 넣은 target/release/YATT.app 생성
 ```
 
 ## 서버와 연결하기
 
 ### 같은 Mac (기본, 자동)
 
-macOS 앱 안에 T3 Code 서버의 단독 실행 빌드(`t3` npm 패키지가 내려받는 것과 같은 파일, 버전은 [t3-version](t3-version))가 들어 있습니다. YATT를 실행하면 이미 실행 중인 T3 Code 서버가 있으면 그 서버를 쓰고, 없으면 내장 서버를 `t3 serve`로 직접 띄운 뒤 앱을 종료할 때 함께 끕니다. 토큰은 `t3 auth session issue`로 1년짜리를 발급받으므로 링크를 붙여 넣을 일이 없습니다.
+macOS 앱 안에 `yatt-server`가 `YATT.app/Contents/Resources/yatt-server`로 들어 있습니다. YATT를 실행하면 이미 실행 중인 `yatt-server`가 있으면 그 서버를 쓰고, 없으면 내장 서버를 빈 포트로 띄운 뒤 앱을 종료할 때 함께 끕니다. 토큰은 `yatt-server auth session issue`로 1년짜리를 발급받으므로 링크를 붙여 넣을 일이 없습니다.
 
-서버 데이터는 T3 Code의 기본 폴더인 `~/.t3`를 그대로 쓰므로, 다른 T3 Code 클라이언트에서 만든 스레드도 함께 보입니다. 서버 출력은 설정 폴더의 `server.log`에 남습니다. 터미널에서 `yatt pair`를 실행해도 같은 방식으로 연결 정보를 만듭니다.
+서버 데이터는 `~/.yatt/server`에 저장됩니다(`YATT_SERVER_HOME`으로 변경 가능). T3 Code의 `~/.t3`와는 따로 두므로, 두 서버가 같은 데이터베이스를 건드리지 않습니다. 그래서 T3 Code에서 만든 프로젝트와 스레드는 보이지 않으며, 프로젝트는 YATT에서 다시 추가해야 합니다. 서버 출력은 설정 폴더의 `server.log`에 남습니다. 터미널에서 `yatt pair`를 실행해도 같은 방식으로 연결 정보를 만듭니다.
 
-에이전트 자체(Codex, Claude Code 등)는 지금처럼 각자 설치되어 있어야 합니다.
+에이전트로 쓰는 Codex CLI는 `PATH`의 `codex`를 사용합니다(`YATT_CODEX_BIN`으로 변경 가능).
 
 ### 다른 컴퓨터의 서버에 연결하는 경우
 
 서버가 실행되는 컴퓨터에서 페어링 링크를 만듭니다.
 
 ```sh
-npx t3@nightly pair            # 또는 설치된 t3 CLI로 `t3 pair`
+yatt-server auth pairing create    # T3 Code 서버라면 `t3 pair`
 ```
 
 출력된 `http://…/pair#token=…` 링크를 YATT 첫 화면에 붙여 넣고 Enter를 누르면 연결됩니다. 터미널에서 `yatt pair <링크>`로 해도 됩니다. 발급된 토큰은 설정 폴더의 `connection.json`에 저장되며 30일 동안 유효합니다. 만료되면 앱이 다시 페어링 화면을 보여 줍니다.
@@ -80,6 +81,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | 동작 | 이름 | 기본 키 |
 |---|---|---|
 | 새 스레드 | `yatt::NewThread` | `cmd-n` |
+| 프로젝트 추가 | `yatt::AddProject` | `cmd-shift-o` |
 | 스레드 이름 변경 | `yatt::RenameThread` | `f2`, `cmd-shift-r` |
 | 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
@@ -108,7 +110,8 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | `src/rpc.rs` | Effect RPC 프로토콜 클라이언트 (별도 스레드의 tokio + WebSocket) |
 | `src/protocol.rs` | 사용하는 orchestration v2 메시지와 명령 정의 |
 | `src/config.rs` | 페어링(토큰 교환)과 연결 정보 저장 |
-| `src/local.rs` | 내장 T3 Code 서버 실행과 종료, 토큰 발급 |
+| `src/local.rs` | 내장 `yatt-server` 실행과 종료, 토큰 발급 |
+| `server/` | T3 Code 서버를 Go로 옮긴 `yatt-server` |
 | `src/workspace.rs` | 메인 화면 |
 | `src/keymap.rs` | 액션 정의, 기본 단축키, `keymap.json` 로더 |
 | `src/theme.rs` | 팔레트와 `theme.json` 로더 |
@@ -124,9 +127,9 @@ python3 scripts/fake-server.py &
 T3_SERVER_URL=http://127.0.0.1:3999 T3_TOKEN=x cargo run
 ```
 
-## Go 서버 (진행 중)
+## Go 서버
 
-T3 Code 서버를 Go로 다시 구현하는 작업을 `server/`에서 진행하고 있습니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 아직 앱에는 포함되지 않습니다.
+`server/`의 `yatt-server`는 T3 Code 서버를 Go로 다시 구현한 것입니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 지금은 YATT가 쓰는 기능(프로젝트, 스레드, Codex 실행과 대기열, 승인 요청, 제목 생성, 체크포인트)을 구현했고, Claude 프로바이더와 worktree는 아직 없습니다.
 
 ## 라이선스와 출처
 

@@ -1,16 +1,14 @@
-//! Runs and pairs with the T3 Code server on this machine, so nothing else has to be
-//! installed.
+//! Runs and pairs with the YATT server on this machine, so nothing else has to be installed.
 //!
-//! The macOS app bundles the T3 Code server's self-contained build (the same one the `t3` npm
-//! package downloads) in `YATT.app/Contents/Resources/t3`. On launch YATT uses a server that is
-//! already running, and otherwise starts the bundled one with `t3 serve` and stops it on quit.
-//! Both use the usual T3 Code data folder, `~/.t3` (`$T3CODE_HOME` moves it), so threads made
-//! with other T3 Code clients show up too.
+//! The macOS app bundles `yatt-server`, the Go port of the T3 Code server, in
+//! `YATT.app/Contents/Resources/yatt-server`. On launch YATT uses a server that is already
+//! running, and otherwise starts the bundled one with `yatt-server serve` and stops it on quit.
+//! Its data lives in `~/.yatt/server` (`$YATT_SERVER_HOME` moves it), apart from T3 Code's
+//! `~/.t3`, so the two servers never share a database.
 //!
-//! A running server records where it listens in `~/.t3/userdata/server-runtime.json`. The
-//! bearer token comes from `t3 auth session issue`, which writes it into that data folder. When
-//! a different T3 Code version is running, `t3 pair` from PATH or `npx t3@<its version>` is
-//! tried instead.
+//! A running server records where it listens in `~/.yatt/server/userdata/server-runtime.json`.
+//! The bearer token comes from `yatt-server auth session issue`, which writes it into that data
+//! folder.
 
 use std::io::Read as _;
 use std::path::PathBuf;
@@ -27,14 +25,12 @@ use crate::config::{self, Connection};
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeState {
     pub origin: String,
-    #[serde(default)]
-    pub server_version: Option<String>,
 }
 
-fn t3_home() -> Option<PathBuf> {
-    match std::env::var_os("T3CODE_HOME") {
+fn server_home() -> Option<PathBuf> {
+    match std::env::var_os("YATT_SERVER_HOME") {
         Some(home) if !home.is_empty() => Some(PathBuf::from(home)),
-        _ => dirs::home_dir().map(|home| home.join(".t3")),
+        _ => dirs::home_dir().map(|home| home.join(".yatt").join("server")),
     }
 }
 
@@ -52,44 +48,10 @@ fn probe(origin: &str) -> bool {
 
 /// The local server that is running and answering, if any.
 pub fn running_server() -> Option<RuntimeState> {
-    let home = t3_home()?;
-    ["userdata", "dev"].into_iter().find_map(|variant| {
-        let text = std::fs::read_to_string(home.join(variant).join("server-runtime.json")).ok()?;
-        let state: RuntimeState = serde_json::from_str(&text).ok()?;
-        probe(&state.origin).then_some(state)
-    })
-}
-
-/// Apps opened from Finder get a short PATH, so add the folders `t3`, node and npx usually
-/// live in, then run through the login shell so its PATH setup applies too.
-fn shell_command(script: &str) -> Command {
-    let shell = std::env::var("SHELL")
-        .ok()
-        .filter(|shell| !shell.is_empty())
-        .unwrap_or_else(|| "/bin/sh".into());
-    let mut path: Vec<PathBuf> = Vec::new();
-    if let Some(home) = dirs::home_dir() {
-        for dir in [
-            ".local/bin",
-            "bin",
-            ".bun/bin",
-            ".volta/bin",
-            ".npm-global/bin",
-        ] {
-            path.push(home.join(dir));
-        }
-    }
-    path.push("/opt/homebrew/bin".into());
-    path.push("/usr/local/bin".into());
-    if let Some(existing) = std::env::var_os("PATH") {
-        path.extend(std::env::split_paths(&existing));
-    }
-    let mut command = Command::new(shell);
-    command.args(["-lc", script]);
-    if let Ok(joined) = std::env::join_paths(path) {
-        command.env("PATH", joined);
-    }
-    command
+    let path = server_home()?.join("userdata").join("server-runtime.json");
+    let text = std::fs::read_to_string(path).ok()?;
+    let state: RuntimeState = serde_json::from_str(&text).ok()?;
+    probe(&state.origin).then_some(state)
 }
 
 fn run(mut command: Command, timeout: Duration) -> Result<String> {
@@ -98,7 +60,7 @@ fn run(mut command: Command, timeout: Duration) -> Result<String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .context("could not start `t3`")?;
+        .context("could not start `yatt-server`")?;
     let mut stdout = child.stdout.take().expect("piped");
     let mut stderr = child.stderr.take().expect("piped");
     let out = std::thread::spawn(move || {
@@ -119,7 +81,10 @@ fn run(mut command: Command, timeout: Duration) -> Result<String> {
         if Instant::now() > deadline {
             let _ = child.kill();
             let _ = child.wait();
-            bail!("`t3` did not finish in {} seconds", timeout.as_secs());
+            bail!(
+                "`yatt-server` did not finish in {} seconds",
+                timeout.as_secs()
+            );
         }
         std::thread::sleep(Duration::from_millis(100));
     };
@@ -130,42 +95,19 @@ fn run(mut command: Command, timeout: Duration) -> Result<String> {
             .lines()
             .chain(stdout.lines())
             .map(str::trim)
-            .rfind(|line| !line.is_empty() && !line.contains("A complete log of this run"))
+            .rfind(|line| !line.is_empty())
             .unwrap_or("no output");
         bail!("{detail}");
     }
     Ok(stdout)
 }
 
-/// Pulls the one-time token out of `t3 pair` output.
-fn token_from_output(output: &str) -> Option<String> {
-    for line in output.lines() {
-        let line = line.trim();
-        if let Some(token) = line.strip_prefix("Token:") {
-            let token = token.trim();
-            if !token.is_empty() {
-                return Some(token.to_string());
-            }
-        }
-        if let Some(link) = line.strip_prefix("Pairing URL:") {
-            let url = url::Url::parse(link.trim()).ok()?;
-            let token = url::form_urlencoded::parse(url.fragment()?.as_bytes())
-                .find(|(key, _)| key == "token")
-                .map(|(_, value)| value.into_owned());
-            if token.is_some() {
-                return token;
-            }
-        }
-    }
-    None
-}
-
 /// How long tokens issued for YATT last. The server saves them like any other session.
 const TOKEN_TTL_DAYS: u64 = 365;
 
-/// The bundled `t3` executable, or `$YATT_T3_BIN`.
-pub fn bundled_t3() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("YATT_T3_BIN").filter(|p| !p.is_empty()) {
+/// The bundled `yatt-server` executable, or `$YATT_SERVER_BIN`.
+pub fn bundled_server() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("YATT_SERVER_BIN").filter(|p| !p.is_empty()) {
         return Some(PathBuf::from(path));
     }
     let exe = std::env::current_exe().ok()?;
@@ -173,8 +115,7 @@ pub fn bundled_t3() -> Option<PathBuf> {
         .parent()?
         .parent()?
         .join("Resources")
-        .join("t3")
-        .join("t3");
+        .join("yatt-server");
     path.is_file().then_some(path)
 }
 
@@ -192,17 +133,18 @@ fn log_tail(path: &std::path::Path) -> String {
 }
 
 fn start_bundled_server() -> Result<RuntimeState> {
-    let t3 = bundled_t3().ok_or_else(|| {
-        anyhow!("no T3 Code server is running, and this build of YATT does not include one")
+    let server = bundled_server().ok_or_else(|| {
+        anyhow!("no YATT server is running, and this build of YATT does not include one")
     })?;
     let dir = config::config_dir();
     std::fs::create_dir_all(&dir).ok();
     let log_path = dir.join("server.log");
     let log = std::fs::File::create(&log_path)
         .with_context(|| format!("creating {}", log_path.display()))?;
-    let mut command = Command::new(&t3);
+    let mut command = Command::new(&server);
+    // Any free port: the runtime state file says which one it took.
     command
-        .arg("serve")
+        .args(["serve", "--port", "0"])
         .stdin(Stdio::null())
         .stdout(log.try_clone()?)
         .stderr(log);
@@ -211,7 +153,7 @@ fn start_bundled_server() -> Result<RuntimeState> {
     }
     let child = command
         .spawn()
-        .with_context(|| format!("could not start {}", t3.display()))?;
+        .with_context(|| format!("could not start {}", server.display()))?;
     *SERVER.lock().unwrap() = Some(child);
 
     let deadline = Instant::now() + Duration::from_secs(90);
@@ -227,14 +169,14 @@ fn start_bundled_server() -> Result<RuntimeState> {
         if let Some(status) = exited {
             SERVER.lock().unwrap().take();
             bail!(
-                "the T3 Code server stopped ({status}): {}",
+                "the YATT server stopped ({status}): {}",
                 log_tail(&log_path)
             );
         }
         if Instant::now() > deadline {
             stop_server();
             bail!(
-                "the T3 Code server did not start within 90 seconds: {}",
+                "the YATT server did not start within 90 seconds: {}",
                 log_tail(&log_path)
             );
         }
@@ -270,9 +212,9 @@ pub fn stop_server() {
     let _ = child.wait();
 }
 
-fn issue_with_bundled() -> Result<String> {
-    let t3 = bundled_t3().ok_or_else(|| anyhow!("no bundled T3 Code server"))?;
-    let mut command = Command::new(t3);
+fn issue_token() -> Result<String> {
+    let server = bundled_server().ok_or_else(|| anyhow!("this build of YATT has no server"))?;
+    let mut command = Command::new(server);
     command.args([
         "auth",
         "session",
@@ -290,59 +232,24 @@ fn issue_with_bundled() -> Result<String> {
         .filter(|line| !line.is_empty())
         .last()
         .map(str::to_owned)
-        .ok_or_else(|| anyhow!("`t3 auth session issue` printed no token"))
-}
-
-fn pair_with_cli(state: &RuntimeState) -> Result<String> {
-    const LABEL: &str = "--label YATT";
-    let mut errors = Vec::new();
-    let mut scripts = vec![format!(
-        "command -v t3 >/dev/null 2>&1 || {{ echo 't3 command not found' >&2; exit 127; }}; exec t3 pair {LABEL}"
-    )];
-    // The version is a semver string from the server's own state file; keep it that way.
-    let version = state
-        .server_version
-        .as_deref()
-        .filter(|v| {
-            v.chars()
-                .all(|c| c.is_ascii_alphanumeric() || ".-+".contains(c))
-        })
-        .unwrap_or("latest");
-    scripts.push(format!("exec npx --yes t3@{version} pair {LABEL}"));
-    for script in scripts {
-        match run(shell_command(&script), Duration::from_secs(180)) {
-            Ok(output) => match token_from_output(&output) {
-                Some(token) => return Ok(token),
-                None => errors.push("`t3 pair` printed no token".to_string()),
-            },
-            Err(error) => errors.push(format!("{error:#}")),
-        }
-    }
-    Err(anyhow!(errors.join("; ")))
+        .ok_or_else(|| anyhow!("`yatt-server auth session issue` printed no token"))
 }
 
 /// Makes sure a local server runs and gets a token for it.
 pub fn pair() -> Result<Connection> {
     let state = ensure_server()?;
-    let bundled_error = match issue_with_bundled() {
-        Ok(token) => {
-            let expires_at = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .ok()
-                .map(|now| now.as_secs() + TOKEN_TTL_DAYS * 86_400);
-            let connection = Connection {
-                server_url: state.origin.trim_end_matches('/').to_string(),
-                token,
-                expires_at,
-            };
-            config::save_connection(&connection)?;
-            return Ok(connection);
-        }
-        Err(error) => error,
+    let token = issue_token().context("could not get a token")?;
+    let expires_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|now| now.as_secs() + TOKEN_TTL_DAYS * 86_400);
+    let connection = Connection {
+        server_url: state.origin.trim_end_matches('/').to_string(),
+        token,
+        expires_at,
     };
-    let token = pair_with_cli(&state)
-        .map_err(|error| anyhow!("could not get a token ({bundled_error:#}; {error:#})"))?;
-    config::exchange_token(&state.origin, &token)
+    config::save_connection(&connection)?;
+    Ok(connection)
 }
 
 /// Starts the local server if needed before using a saved connection to it, and follows the
@@ -372,17 +279,6 @@ pub fn is_local(connection: &Connection) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn reads_token_from_pair_output() {
-        let output = "Pairing with Mac (http://127.0.0.1:3773).\n\n█▀▀█\n\n\
-            Pairing URL: http://127.0.0.1:3773/pair#token=abc%2Bdef\n\
-            App link: t3://pair?x\nToken: abc+def\nExpires: 2026-01-01T00:00:00Z\n";
-        assert_eq!(token_from_output(output).as_deref(), Some("abc+def"));
-        let url_only = "Pairing URL: http://127.0.0.1:3773/pair#token=xyz\n";
-        assert_eq!(token_from_output(url_only).as_deref(), Some("xyz"));
-        assert_eq!(token_from_output("nothing here"), None);
-    }
 
     #[test]
     fn local_hosts() {

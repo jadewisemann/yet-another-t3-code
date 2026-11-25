@@ -53,6 +53,7 @@ enum RpcCommand {
     SubscribeThread(Option<String>),
     Dispatch { label: String, command: Value },
     Launch { input: Value },
+    MutateProject { input: Value },
 }
 
 #[derive(Clone)]
@@ -75,6 +76,10 @@ impl RpcHandle {
 
     pub fn launch_thread(&self, input: Value) {
         let _ = self.tx.send(RpcCommand::Launch { input });
+    }
+
+    pub fn mutate_project(&self, input: Value) {
+        let _ = self.tx.send(RpcCommand::MutateProject { input });
     }
 }
 
@@ -144,6 +149,12 @@ async fn run(
                     Some(RpcCommand::Launch { .. }) => {
                         let _ = events.send(RpcEvent::CommandFailed {
                             label: "New thread".into(),
+                            error: "not connected".into(),
+                        }).await;
+                    }
+                    Some(RpcCommand::MutateProject { .. }) => {
+                        let _ = events.send(RpcEvent::CommandFailed {
+                            label: "Add project".into(),
                             error: "not connected".into(),
                         }).await;
                     }
@@ -256,6 +267,9 @@ async fn session(
                     }
                     RpcCommand::Launch { input } => {
                         request!(method::LAUNCH_THREAD, input, Pending::Launch);
+                    }
+                    RpcCommand::MutateProject { input } => {
+                        request!(method::PROJECTS_MUTATE, input, Pending::Call("Add project".into()));
                     }
                 }
             }
@@ -417,16 +431,21 @@ fn exit_failure(exit: &Value) -> Option<String> {
     })
 }
 
-#[allow(dead_code)]
+/// The model and modes for a new thread: the most recent thread's, else the project's
+/// default model, else Codex's default.
 pub fn launch_defaults_from(
     thread: Option<&protocol::ThreadShell>,
     project: Option<&protocol::ProjectShell>,
-) -> Option<protocol::LaunchDefaults> {
+) -> protocol::LaunchDefaults {
     let model_selection = thread
         .and_then(|t| t.model_selection.clone())
         .or_else(|| project.and_then(|p| p.default_model_selection.clone()))
-        .filter(|v| !v.is_null())?;
-    Some(protocol::LaunchDefaults {
+        .filter(|v| !v.is_null())
+        .unwrap_or_else(|| {
+            let (instance, model) = protocol::DEFAULT_MODEL_SELECTION;
+            json!({ "instanceId": instance, "model": model })
+        });
+    protocol::LaunchDefaults {
         model_selection,
         runtime_mode: thread
             .and_then(|t| t.runtime_mode.clone())
@@ -434,7 +453,7 @@ pub fn launch_defaults_from(
         interaction_mode: thread
             .and_then(|t| t.interaction_mode.clone())
             .unwrap_or_else(|| "default".into()),
-    })
+    }
 }
 
 #[cfg(test)]

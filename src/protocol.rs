@@ -15,6 +15,7 @@ pub mod method {
     pub const LAUNCH_THREAD: &str = "orchestration.launchThread";
     pub const SUBSCRIBE_SHELL: &str = "orchestration.subscribeShell";
     pub const SUBSCRIBE_THREAD: &str = "orchestration.subscribeThread";
+    pub const PROJECTS_MUTATE: &str = "projects.mutate";
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -279,6 +280,25 @@ pub fn archive_thread(thread_id: &str) -> Value {
         "threadId": thread_id,
     })
 }
+
+/// Adds a folder as a project. The title is the folder's name.
+pub fn create_project(project_id: &str, workspace_root: &std::path::Path) -> Value {
+    let title = workspace_root
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| workspace_root.display().to_string());
+    json!({
+        "type": "project.create",
+        "commandId": new_id(),
+        "projectId": project_id,
+        "title": title,
+        "workspaceRoot": workspace_root.display().to_string(),
+    })
+}
+
+/// Codex's default model, for a first thread when no thread or project names one.
+pub const DEFAULT_MODEL_SELECTION: (&str, &str) = ("codex", "gpt-6-astra");
 
 pub struct LaunchDefaults {
     pub model_selection: Value,

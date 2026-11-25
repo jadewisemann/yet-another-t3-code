@@ -4,34 +4,20 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 target_dir="${1:-target/release}"
 version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
-app="$target_dir/YATT.app"
+app="$(cd "$target_dir" && pwd)/YATT.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$target_dir/yatt" "$app/Contents/MacOS/yatt"
 
-# Bundle the T3 Code server: the self-contained build that the `t3` npm package downloads,
-# checked against the release's SHA256SUMS. Bump T3_VERSION to ship a newer server; it must
-# speak the orchestration protocol in src/protocol.rs.
-t3_version="$(cat t3-version)"
-t3_archive="t3-${t3_version}-darwin-arm64.tar.gz"
-t3_base="https://github.com/pingdotgg/t3code/releases/download/v${t3_version}"
-t3_cache="$target_dir/t3-cache"
-mkdir -p "$t3_cache"
-if [ ! -f "$t3_cache/$t3_archive" ]; then
-  curl -fsSL --retry 3 -o "$t3_cache/$t3_archive.part" "$t3_base/$t3_archive"
-  mv "$t3_cache/$t3_archive.part" "$t3_cache/$t3_archive"
+# Bundle yatt-server, the Go port of the T3 Code server in server/. Set YATT_SERVER_BIN to
+# bundle a binary built elsewhere instead.
+if [ -n "${YATT_SERVER_BIN:-}" ]; then
+  cp "$YATT_SERVER_BIN" "$app/Contents/Resources/yatt-server"
+else
+  (cd server && CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath \
+    -ldflags "-s -w -X github.com/jadewisemann/yet-another-t3-code/server/internal/server.BuildVersion=${version}" \
+    -o "$app/Contents/Resources/yatt-server" ./cmd/yatt-server)
 fi
-curl -fsSL --retry 3 -o "$t3_cache/SHA256SUMS" "$t3_base/SHA256SUMS"
-expected="$(awk -v f="$t3_archive" '$2 == f || $2 == "*"f { print $1 }' "$t3_cache/SHA256SUMS")"
-actual="$(shasum -a 256 "$t3_cache/$t3_archive" | cut -d' ' -f1)"
-if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
-  echo "checksum mismatch for $t3_archive" >&2
-  rm -f "$t3_cache/$t3_archive"
-  exit 1
-fi
-mkdir -p "$app/Contents/Resources/t3"
-tar -xzf "$t3_cache/$t3_archive" -C "$app/Contents/Resources/t3" --strip-components=1
-echo "$t3_version" > "$app/Contents/Resources/t3/.install-complete"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

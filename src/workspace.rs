@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla,
-    ScrollHandle, SharedString, Subscription, Task, Window, div, prelude::*, px,
+    PathPromptOptions, ScrollHandle, SharedString, Subscription, Task, Window, div, prelude::*, px,
 };
 
 use crate::config::{self, Connection};
@@ -377,17 +377,10 @@ impl Workspace {
                         .values()
                         .max_by(|a, b| a.sort_key().cmp(b.sort_key()))
                 });
-            let Some(defaults) = rpc::launch_defaults_from(recent, project) else {
-                self.notice = Some(
-                    "No model to start with yet. Start one thread in T3 Code first, then this app reuses its model."
-                        .into(),
-                );
-                cx.notify();
-                return;
-            };
+            let defaults = rpc::launch_defaults_from(recent, project);
             rpc.launch_thread(protocol::launch_thread(&project_id, &defaults, &text));
         } else {
-            self.notice = Some("Add a project in T3 Code first.".into());
+            self.notice = Some("Add a project first: choose its folder with Add project.".into());
             cx.notify();
             return;
         }
@@ -432,6 +425,35 @@ impl Workspace {
         self.select_thread(None, window, cx);
         self.draft_project = project;
         cx.notify();
+    }
+
+    /// Asks for a folder and adds it as a project, then starts a draft thread in it.
+    fn add_project(&mut self, _: &AddProject, window: &mut Window, cx: &mut Context<Self>) {
+        if self.rpc.is_none() {
+            return;
+        }
+        let paths = cx.prompt_for_paths(PathPromptOptions {
+            files: false,
+            directories: true,
+            multiple: false,
+            prompt: Some("Add project".into()),
+        });
+        cx.spawn_in(window, async move |this, cx| {
+            let Ok(Ok(Some(paths))) = paths.await else {
+                return;
+            };
+            let Some(path) = paths.into_iter().next() else {
+                return;
+            };
+            this.update_in(cx, |this, window, cx| {
+                let Some(rpc) = this.rpc.clone() else { return };
+                let project_id = protocol::new_id();
+                rpc.mutate_project(protocol::create_project(&project_id, &path));
+                this.new_thread_in(project_id, window, cx);
+            })
+            .ok();
+        })
+        .detach();
     }
 
     fn new_thread_in(&mut self, project_id: String, window: &mut Window, cx: &mut Context<Self>) {
@@ -599,7 +621,7 @@ impl Workspace {
         .detach();
     }
 
-    /// Finds T3 Code on this machine (opening the app if needed) and pairs with it.
+    /// Starts the server on this machine if needed and pairs with it.
     fn pair_local(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if matches!(self.status, Status::Pairing | Status::PairingLocal) {
             return;
@@ -661,18 +683,18 @@ impl Workspace {
                     .flex()
                     .flex_col()
                     .gap_3()
-                    .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child("Connect to T3 Code"))
+                    .child(div().text_xl().font_weight(FontWeight::SEMIBOLD).child("Connect to a server"))
                     .child(div().text_color(p.muted).child(
-                        "YATT runs the T3 Code server on this computer by itself, so there is nothing else to install.",
+                        "YATT runs its own server on this computer, so there is nothing else to install.",
                     ))
                     .child(
                         div().flex().items_center().gap_2().child(
                             button(
                                 "pair-local",
                                 if finding {
-                                    "Starting T3 Code on this computer…".to_string()
+                                    "Starting the server on this computer…".to_string()
                                 } else {
-                                    "Start T3 Code on this computer".to_string()
+                                    "Start the server on this computer".to_string()
                                 },
                                 p,
                             )
@@ -682,7 +704,7 @@ impl Workspace {
                         ),
                     )
                     .child(div().text_color(p.muted).child(
-                        "For a server on another machine, run `t3 pair` there (or create a pairing link in its settings), then paste the link here and press Enter.",
+                        "For a server on another machine, create a pairing link there (`yatt-server auth pairing create`, or `t3 pair` for T3 Code), then paste the link here and press Enter.",
                     ))
                     .child(input_box(self.pair_input.clone(), p))
                     .when(busy, |el| el.child(div().text_color(p.muted).child("Pairing…")))
@@ -711,6 +733,19 @@ impl Workspace {
             .flex()
             .flex_col()
             .gap_0p5();
+        if groups.is_empty() && self.shell_synced {
+            list = list.child(
+                div()
+                    .mt_3()
+                    .px_2()
+                    .text_sm()
+                    .text_color(p.muted)
+                    .child(format!(
+                        "No projects yet. Add a folder with Add ({}).",
+                        window.keystroke_text_for(&AddProject)
+                    )),
+            );
+        }
         for (project, threads) in groups {
             let project_id = project.id.clone();
             list = list.child(
@@ -813,22 +848,43 @@ impl Workspace {
                     .flex()
                     .justify_between()
                     .items_center()
-                    .child(div().font_weight(FontWeight::SEMIBOLD).child("T3 Code"))
+                    .child(div().font_weight(FontWeight::SEMIBOLD).child("Projects"))
                     .child(
                         div()
-                            .id("new-thread")
-                            .px_2()
-                            .py_1()
-                            .rounded_md()
-                            .text_sm()
-                            .cursor_pointer()
-                            .border_1()
-                            .border_color(p.border)
-                            .hover(|s| s.bg(p.row_hover))
-                            .child(format!("New  {new_thread_keys}"))
-                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
-                                this.new_thread(&NewThread, window, cx)
-                            })),
+                            .flex()
+                            .gap_1()
+                            .child(
+                                div()
+                                    .id("add-project")
+                                    .px_2()
+                                    .py_1()
+                                    .rounded_md()
+                                    .text_sm()
+                                    .cursor_pointer()
+                                    .border_1()
+                                    .border_color(p.border)
+                                    .hover(|s| s.bg(p.row_hover))
+                                    .child("Add")
+                                    .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                                        this.add_project(&AddProject, window, cx)
+                                    })),
+                            )
+                            .child(
+                                div()
+                                    .id("new-thread")
+                                    .px_2()
+                                    .py_1()
+                                    .rounded_md()
+                                    .text_sm()
+                                    .cursor_pointer()
+                                    .border_1()
+                                    .border_color(p.border)
+                                    .hover(|s| s.bg(p.row_hover))
+                                    .child(format!("New  {new_thread_keys}"))
+                                    .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                                        this.new_thread(&NewThread, window, cx)
+                                    })),
+                            ),
                     ),
             )
             .child(list)
@@ -912,7 +968,7 @@ impl Workspace {
             .child(div().text_color(p.muted).child("/"))
             .child(div().flex_1().overflow_hidden().child(title))
             .when(attention, |el| {
-                el.child(chip("Needs your answer in T3 Code", p.danger, p))
+                el.child(chip("Needs your answer", p.danger, p))
             })
             .when(working, |el| el.child(chip("Working…", p.working, p)))
             .when(thread.is_some() && !self.renaming, |el| {
@@ -1140,6 +1196,7 @@ impl Render for Workspace {
             .key_context("Workspace")
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::new_thread))
+            .on_action(cx.listener(Self::add_project))
             .on_action(cx.listener(Self::rename_thread))
             .on_action(cx.listener(Self::next_thread))
             .on_action(cx.listener(Self::previous_thread))
