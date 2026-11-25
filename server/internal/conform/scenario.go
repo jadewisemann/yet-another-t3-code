@@ -61,6 +61,8 @@ type Step struct {
 	// Body and ContentType are sent with an http step (Body is expanded).
 	Body        string `json:"body,omitempty"`
 	ContentType string `json:"contentType,omitempty"`
+	// BodyBase64 sends these bytes instead of Body, for binary uploads.
+	BodyBase64 string `json:"bodyBase64,omitempty"`
 
 	// cli: arguments after the binary, expanded. git: arguments to git,
 	// run in the workspace with a fixed author and date. Every cli call gets

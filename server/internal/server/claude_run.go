@@ -344,7 +344,26 @@ func (rn *runner) runClaude(r *runState) error {
 	if err != nil {
 		return err
 	}
-	if err := p.SendUser(r.text, u); err != nil {
+	text := rn.srv.textWithAttachmentPaths(r.text, r.attachments)
+	images, err := rn.srv.agentImages(r.attachments)
+	if err != nil {
+		return err
+	}
+	if len(images) == 0 {
+		err = p.SendUser(text, u)
+	} else {
+		// Upstream sends the images first, then the text.
+		var content []any
+		for _, img := range images {
+			content = append(content, map[string]any{"type": "image",
+				"source": map[string]any{"type": "base64", "media_type": img.mime, "data": img.data}})
+		}
+		if text != "" {
+			content = append(content, map[string]any{"type": "text", "text": text})
+		}
+		err = p.SendUserContent(content, u)
+	}
+	if err != nil {
 		return err
 	}
 	return rn.followClaude(ctx, p, r)

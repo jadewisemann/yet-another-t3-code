@@ -1,7 +1,9 @@
 package conform
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -248,7 +250,18 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 				}
 				reqBody = strings.NewReader(string(b))
 			}
-			req, err := http.NewRequestWithContext(stepCtx, defaultStr(st.HTTPMethod, "GET"), t.Origin()+st.Path, reqBody)
+			if st.BodyBase64 != "" {
+				b, err := base64.StdEncoding.DecodeString(st.BodyBase64)
+				if err != nil {
+					return fail(err)
+				}
+				reqBody = bytes.NewReader(b)
+			}
+			path, err := vars.Expand(json.RawMessage(st.Path))
+			if err != nil {
+				return fail(err)
+			}
+			req, err := http.NewRequestWithContext(stepCtx, defaultStr(st.HTTPMethod, "GET"), t.Origin()+string(path), reqBody)
 			if err != nil {
 				return fail(err)
 			}

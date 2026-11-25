@@ -1,0 +1,202 @@
+{
+  "description": "Attachments: upload URLs for an image and a text file, the uploads (the same upload URL can be used twice), a message that carries both, how they reach codex (the fake replies with its turn input), and the message as the thread records it.",
+  "tier": "p3",
+  "steps": [
+    {
+      "op": "call",
+      "as": "project",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "call",
+      "as": "create",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create",
+        "createdBy": "user",
+        "creationSource": "web",
+        "commandId": "${uuid:cmd-create}",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "Attachments",
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "branch": null,
+        "worktreePath": null
+      }
+    },
+    {
+      "op": "call",
+      "as": "image-url",
+      "method": "attachments.createUploadUrl",
+      "payload": {
+        "type": "image",
+        "name": "dot.png",
+        "mimeType": "image/png",
+        "sizeBytes": 70
+      },
+      "capture": {
+        "image": "attachmentId",
+        "imageUrl": "relativeUrl"
+      }
+    },
+    {
+      "op": "call",
+      "as": "file-url",
+      "method": "attachments.createUploadUrl",
+      "payload": {
+        "type": "file",
+        "name": "notes.txt",
+        "mimeType": "text/plain",
+        "sizeBytes": 17
+      },
+      "capture": {
+        "file": "attachmentId",
+        "fileUrl": "relativeUrl"
+      }
+    },
+    {
+      "op": "http",
+      "httpMethod": "POST",
+      "path": "${var:imageUrl}",
+      "contentType": "image/png",
+      "bodyBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    },
+    {
+      "op": "http",
+      "httpMethod": "POST",
+      "path": "${var:fileUrl}",
+      "contentType": "text/plain",
+      "bodyBase64": "aGVsbG8gYXR0YWNobWVudAo="
+    },
+    {
+      "op": "http",
+      "httpMethod": "POST",
+      "path": "${var:fileUrl}",
+      "contentType": "text/plain",
+      "bodyBase64": "aGVsbG8gYXR0YWNobWVudAo="
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "sequence",
+        "snapshotSequence"
+      ]
+    },
+    {
+      "op": "call",
+      "as": "send",
+      "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "message.dispatch",
+        "commandId": "${uuid:cmd-send}",
+        "createdBy": "user",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "messageId": "${uuid:message}",
+        "text": "inputs please",
+        "attachments": [
+          {
+            "type": "image",
+            "id": "${var:image}",
+            "name": "dot.png",
+            "mimeType": "image/png",
+            "sizeBytes": 70
+          },
+          {
+            "type": "file",
+            "id": "${var:file}",
+            "name": "notes.txt",
+            "mimeType": "text/plain",
+            "sizeBytes": 17
+          }
+        ],
+        "dispatchMode": {
+          "type": "start_immediately"
+        }
+      },
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "event",
+        "event": {
+          "type": "run.updated",
+          "payload": {
+            "status": "completed"
+          }
+        }
+      },
+      "timeoutMs": 20000,
+      "record": "match",
+      "ignore": [
+        "sequence",
+        "snapshotSequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    },
+    {
+      "op": "subscribe",
+      "as": "after",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "after",
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match",
+      "ignore": [
+        "snapshotSequence",
+        "sequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "after"
+    },
+    {
+      "op": "call",
+      "as": "delete",
+      "method": "attachments.delete",
+      "payload": {
+        "attachmentId": "${var:image}"
+      }
+    }
+  ]
+}

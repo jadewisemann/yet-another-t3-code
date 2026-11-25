@@ -124,6 +124,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /.well-known/t3/environment", s.environment)
 	mux.HandleFunc("GET /ws", s.websocket)
 	mux.HandleFunc("POST /oauth/token", s.oauthToken)
+	mux.HandleFunc("POST "+attachmentUploadPrefix+"{token}", s.uploadAttachment)
 	return mux
 }
 
