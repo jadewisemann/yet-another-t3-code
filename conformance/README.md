@@ -52,3 +52,5 @@ scripts/conformance.sh go         # yatt-server를 골든과 비교 (expected-fa
 - `codex exec`(제목 생성)와 `codex mcp list`는 지원하지 않고 종료 코드 2로 끝납니다. 업스트림은 이 실패를 경고로만 남깁니다.
 
 체크포인트 ref(`refs/t3/orchestration-v2/checkpoints/<키>/ordinal/<n>`)의 키는 `base64url(hex(sha256(scopeId))[:32])`이고 scopeId에 스레드 id가 들어가므로, 기록할 때는 `<scope-key>`로 바뀝니다.
+
+업스트림에서도 스트림 안의 위치가 타이밍에 따라 달라지는 값은 `subscribe`의 `aside`에 패턴으로 적습니다. 이 패턴과 일치하는 값은 다른 값과 따로 모이고, `fromAside: true`인 `await`만 그 값을 확인합니다. 패턴의 `"$present"`는 값이 있기만 하면 일치합니다. 지금은 SHELL-8의 저장소 식별 스냅샷에 씁니다.

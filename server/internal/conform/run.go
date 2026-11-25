@@ -46,6 +46,8 @@ type stream struct {
 	method string
 	mu     sync.Mutex
 	values []json.RawMessage
+	aside  []json.RawMessage // values that matched an aside pattern
+	asideP []any
 	exit   *wire.Exit
 	notify chan struct{}
 }
@@ -141,6 +143,13 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 					return fail(err)
 				}
 				s := &stream{id: id, method: st.Method, notify: make(chan struct{}, 1)}
+				for _, raw := range st.Aside {
+					var p any
+					if err := json.Unmarshal(raw, &p); err != nil {
+						return fail(err)
+					}
+					s.asideP = append(s.asideP, p)
+				}
 				streams[st.As] = s
 				go func(method string) {
 					for f := range ch {
@@ -155,7 +164,21 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 									}
 								}
 							}
-							s.values = append(s.values, f.Values...)
+							for _, v := range f.Values {
+								var got any
+								_ = json.Unmarshal(v, &got)
+								set := false
+								for _, p := range s.asideP {
+									if matches(p, got) {
+										set = true
+									}
+								}
+								if set {
+									s.aside = append(s.aside, v)
+								} else {
+									s.values = append(s.values, v)
+								}
+							}
 							trace(method, f.Values)
 						} else if f.Tag == wire.TagExit {
 							s.exit = f.Exit
@@ -179,7 +202,7 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 			if err := json.Unmarshal(orEmpty(st.Match), &want); err != nil {
 				return fail(err)
 			}
-			got, err := s.takeUntil(stepCtx, want)
+			got, err := s.takeUntil(stepCtx, want, st.FromAside)
 			if err != nil {
 				return fail(err)
 			}
@@ -395,23 +418,27 @@ func truncate(s string, n int) string {
 
 // takeUntil returns the values received since the last call, up to and
 // including the first one that matches want.
-func (s *stream) takeUntil(ctx context.Context, want any) ([]json.RawMessage, error) {
+func (s *stream) takeUntil(ctx context.Context, want any, fromAside bool) ([]json.RawMessage, error) {
 	for {
 		s.mu.Lock()
-		for i, v := range s.values {
+		list := &s.values
+		if fromAside {
+			list = &s.aside
+		}
+		for i, v := range *list {
 			var got any
 			_ = json.Unmarshal(v, &got)
 			if matches(want, got) {
-				out := append([]json.RawMessage(nil), s.values[:i+1]...)
-				s.values = s.values[i+1:]
+				out := append([]json.RawMessage(nil), (*list)[:i+1]...)
+				*list = (*list)[i+1:]
 				s.mu.Unlock()
 				return out, nil
 			}
 		}
 		exit := s.exit
-		pending := len(s.values)
+		pending := len(*list)
 		var seen []string
-		for _, v := range s.values {
+		for _, v := range *list {
 			t := string(v)
 			if len(t) > 200 {
 				t = t[:200] + "…"
@@ -448,7 +475,12 @@ func (s *stream) waitExit(ctx context.Context) (*wire.Exit, error) {
 }
 
 // matches reports whether every key of want is in got with a matching value.
+// matches reports whether got has every key of want with an equal value.
+// The string "$present" matches any value that is there.
 func matches(want, got any) bool {
+	if want == "$present" {
+		return got != nil
+	}
 	switch w := want.(type) {
 	case map[string]any:
 		g, ok := got.(map[string]any)

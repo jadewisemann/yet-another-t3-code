@@ -43,6 +43,12 @@ type Step struct {
 	// Ignore lists field names whose values this step does not record
 	// (they become "<ignored>"), for values upstream itself does not pin down.
 	Ignore []string `json:"ignore,omitempty"`
+	// Aside (subscribe) lists patterns for values whose position in the
+	// stream depends on timing even upstream. They are kept apart from the
+	// stream's other values and only an await with fromAside sees them.
+	Aside []json.RawMessage `json:"aside,omitempty"`
+	// FromAside makes an await look for its match among the set-aside values.
+	FromAside bool `json:"fromAside,omitempty"`
 	// TimeoutMs bounds call/await/interrupt. Default 15000.
 	TimeoutMs int `json:"timeoutMs,omitempty"`
 
