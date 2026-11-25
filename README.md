@@ -14,12 +14,13 @@
 - 프로젝트별 스레드 목록 (진행 중인 스레드와 답변을 기다리는 스레드는 점으로 표시)
 - 대화 보기와 실시간 스트리밍, 메시지 보내기 (실행 중이면 대기열에 추가)
 - 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용하고, 처음에는 Codex 기본 모델을 사용). 제목은 첫 메시지를 보고 Codex가 지어 줍니다.
+- **모델 선택**: 새 스레드를 시작할 때 입력창 아래의 모델 버튼이나 `Cmd-Shift-M`으로 Codex 모델(GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna)과 Claude 모델(Opus 5.5, Sonnet 5.5, Fable 5.2, Haiku 5.5)을 차례로 바꿉니다. 이미 시작한 스레드는 처음 고른 모델을 계속 씁니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
 - 실행 중지, 스레드 보관
 - 승인 요청에 답하기 (승인, 이 세션 동안 승인, 거절)와 에이전트의 질문에 보기를 고르거나 입력창 내용으로 답하기
 - 단축키와 색상, 글꼴을 설정 파일로 변경 (재시작 없이 다시 불러오기 가능)
 
-아직 없는 것: diff 보기, 터미널, 첨부 파일, 모델 선택, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
+아직 없는 것: diff 보기, 터미널, 첨부 파일, 시작한 스레드의 모델 변경, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
 
 ## 설치
 
@@ -30,7 +31,7 @@ brew tap jadewisemann/yatt https://github.com/jadewisemann/yet-another-t3-code
 brew install --cask yatt
 ```
 
-Homebrew 설치만으로 끝나며, T3 Code 앱이나 Node.js를 따로 설치할 필요가 없습니다. 에이전트로 쓸 Codex CLI(`codex`)는 따로 설치되어 있어야 합니다. 업데이트는 `brew upgrade --cask yatt`로 합니다. 설치하면 `/Applications/YATT.app`과 터미널용 `yatt` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
+Homebrew 설치만으로 끝나며, T3 Code 앱이나 Node.js를 따로 설치할 필요가 없습니다. 에이전트로 쓸 Codex CLI(`codex`)나 Claude Code(`claude`)는 따로 설치하고 로그인해 두어야 합니다. 업데이트는 `brew upgrade --cask yatt`로 합니다. 설치하면 `/Applications/YATT.app`과 터미널용 `yatt` 명령이 함께 생깁니다. 앱은 개발자 서명 없이 ad-hoc 서명만 되어 있으므로, cask가 설치 직후 격리 속성(quarantine)을 지워서 바로 열리게 합니다.
 
 새 버전은 `Cargo.toml`의 `version`을 올려 main에 병합하면 배포됩니다. `Release` 워크플로가 macOS 앱을 빌드해 GitHub Release를 만들고, `Casks/yatt.rb`의 버전과 sha256을 자동으로 갱신합니다.
 
@@ -83,6 +84,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 |---|---|---|
 | 새 스레드 | `yatt::NewThread` | `cmd-n` |
 | 프로젝트 추가 | `yatt::AddProject` | `cmd-shift-o` |
+| 새 스레드의 모델 바꾸기 | `yatt::CycleModel` | `cmd-shift-m` |
 | 스레드 이름 변경 | `yatt::RenameThread` | `f2`, `cmd-shift-r` |
 | 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
@@ -130,7 +132,7 @@ T3_SERVER_URL=http://127.0.0.1:3999 T3_TOKEN=x cargo run
 
 ## Go 서버
 
-`server/`의 `yatt-server`는 T3 Code 서버를 Go로 다시 구현한 것입니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 지금은 YATT가 쓰는 기능(프로젝트, 스레드, Codex 실행과 대기열, 승인 요청, 제목 생성, 체크포인트)을 구현했고, Claude 프로바이더와 worktree는 아직 없습니다.
+`server/`의 `yatt-server`는 T3 Code 서버를 Go로 다시 구현한 것입니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 지금은 YATT가 쓰는 기능(프로젝트, 스레드, Codex와 Claude Code 실행, 대기열, 승인 요청, 제목 생성, 체크포인트)을 구현했고, worktree는 아직 없습니다.
 
 ## 라이선스와 출처
 

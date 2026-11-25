@@ -396,6 +396,59 @@ pub fn create_project(project_id: &str, workspace_root: &std::path::Path) -> Val
 /// Codex's default model, for a first thread when no thread or project names one.
 pub const DEFAULT_MODEL_SELECTION: (&str, &str) = ("codex", "gpt-6-astra");
 
+/// The models a new thread can start on, as (provider instance, model, label). These are the
+/// current models upstream's model manifest lists for the Codex and Claude providers.
+pub const MODEL_CHOICES: &[(&str, &str, &str)] = &[
+    ("codex", "gpt-6-astra", "GPT-6 Astra"),
+    ("codex", "gpt-6.1-sol", "GPT-6.1 Sol"),
+    ("codex", "gpt-6-luna", "GPT-6 Luna"),
+    ("claudeAgent", "claude-opus-5-5", "Claude Opus 5.5"),
+    ("claudeAgent", "claude-sonnet-5-5", "Claude Sonnet 5.5"),
+    ("claudeAgent", "claude-fable-5-2", "Claude Fable 5.2"),
+    ("claudeAgent", "claude-haiku-5-5", "Claude Haiku 5.5"),
+];
+
+pub fn model_selection(instance: &str, model: &str) -> Value {
+    json!({ "instanceId": instance, "model": model })
+}
+
+/// The label of a model selection: its name in MODEL_CHOICES, else the model id.
+pub fn model_label(selection: &Value) -> String {
+    let instance = selection
+        .get("instanceId")
+        .or_else(|| selection.get("provider"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let model = selection.get("model").and_then(Value::as_str).unwrap_or("");
+    MODEL_CHOICES
+        .iter()
+        .find(|(i, m, _)| *i == instance && *m == model)
+        .map(|(_, _, label)| label.to_string())
+        .unwrap_or_else(|| {
+            if model.is_empty() {
+                "Default model".into()
+            } else {
+                model.to_string()
+            }
+        })
+}
+
+/// The model after `selection` in MODEL_CHOICES, wrapping around; the first one when
+/// `selection` is not listed.
+pub fn next_model(selection: &Value) -> Value {
+    let instance = selection
+        .get("instanceId")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let model = selection.get("model").and_then(Value::as_str).unwrap_or("");
+    let next = MODEL_CHOICES
+        .iter()
+        .position(|(i, m, _)| *i == instance && *m == model)
+        .map_or(0, |i| (i + 1) % MODEL_CHOICES.len());
+    let (i, m, _) = MODEL_CHOICES[next];
+    model_selection(i, m)
+}
+
 pub struct LaunchDefaults {
     pub model_selection: Value,
     pub runtime_mode: String,
@@ -425,6 +478,21 @@ pub fn launch_thread(project_id: &str, defaults: &LaunchDefaults, first_message:
             "attachments": [],
         },
     })
+}
+
+#[cfg(test)]
+mod model_tests {
+    use super::*;
+
+    #[test]
+    fn cycles_models_and_labels_them() {
+        let first = model_selection("codex", "gpt-6-astra");
+        assert_eq!(model_label(&first), "GPT-6 Astra");
+        let last = model_selection("claudeAgent", "claude-haiku-5-5");
+        assert_eq!(next_model(&last), first);
+        assert_eq!(next_model(&model_selection("codex", "unknown")), first);
+        assert_eq!(model_label(&model_selection("codex", "gpt-9")), "gpt-9");
+    }
 }
 
 #[cfg(test)]
