@@ -1,0 +1,28 @@
+name: Upstream watch
+
+# Shows how far upstream T3 Code has moved from the spec this repository is
+# pinned to. It only reports; moving the pin is a pull request
+# (scripts/spec-update.sh <tag>, then re-record the golden transcripts).
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Upstream tag to compare with, or `nightly`"
+        default: nightly
+
+jobs:
+  diff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - uses: oven-sh/setup-bun@v2
+      - name: Diff the spec
+        run: |
+          scripts/spec-update.sh "${{ inputs.ref || 'nightly' }}" | tee "$RUNNER_TEMP/diff.txt"
+          { echo '```'; cat "$RUNNER_TEMP/diff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

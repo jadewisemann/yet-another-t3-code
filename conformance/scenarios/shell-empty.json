@@ -1,0 +1,12 @@
+{
+  "description": "subscribeShell on a fresh data directory. With `{}` (what YATT sends) the server sends a snapshot; with `requestCompletionMarker` it follows the snapshot with `synchronized`.",
+  "tier": "p1",
+  "steps": [
+    { "op": "subscribe", "as": "plain", "method": "orchestration.subscribeShell", "payload": {} },
+    { "op": "await", "stream": "plain", "match": { "kind": "snapshot" } },
+    { "op": "interrupt", "stream": "plain" },
+    { "op": "subscribe", "as": "marked", "method": "orchestration.subscribeShell", "payload": { "requestCompletionMarker": true } },
+    { "op": "await", "stream": "marked", "match": { "kind": "synchronized" } },
+    { "op": "interrupt", "stream": "marked" }
+  ]
+}

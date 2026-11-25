@@ -1,0 +1,7 @@
+{
+  "description": "The unauthenticated descriptor YATT probes to find a local server. Records the top-level keys only, since values depend on the machine.",
+  "tier": "p1",
+  "steps": [
+    { "op": "http", "path": "/.well-known/t3/environment", "record": "keys" }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario": "environment-descriptor",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "http",
+      "as": "/.well-known/t3/environment",
+      "status": 200,
+      "body": [
+        "capabilities",
+        "databaseMigration",
+        "environmentId",
+        "label",
+        "orchestrationProtocolVersion",
+        "platform",
+        "serverVersion"
+      ]
+    }
+  ]
+}

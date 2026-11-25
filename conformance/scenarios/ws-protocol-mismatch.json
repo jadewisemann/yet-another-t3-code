@@ -1,0 +1,8 @@
+{
+  "description": "A WebSocket request without `orchestrationProtocol=2` gets 426 and a JSON body that YATT shows to the user.",
+  "tier": "p1",
+  "steps": [
+    { "op": "http", "path": "/ws", "auth": true },
+    { "op": "http", "path": "/ws?orchestrationProtocol=1", "auth": true }
+  ]
+}

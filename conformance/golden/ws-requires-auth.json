@@ -1,0 +1,12 @@
+{
+  "scenario": "ws-requires-auth",
+  "recordedOn": "t3 v0.1.11",
+  "transcript": [
+    {
+      "step": 0,
+      "op": "http",
+      "as": "/ws?orchestrationProtocol=2&clientSurface=desktop",
+      "status": 401
+    }
+  ]
+}

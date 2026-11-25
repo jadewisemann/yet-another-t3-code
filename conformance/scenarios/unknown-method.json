@@ -1,0 +1,7 @@
+{
+  "description": "A request for a method the server does not know.",
+  "tier": "p1",
+  "steps": [
+    { "op": "call", "method": "yatt.doesNotExist", "payload": {} }
+  ]
+}

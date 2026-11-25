@@ -124,6 +124,10 @@ python3 scripts/fake-server.py &
 T3_SERVER_URL=http://127.0.0.1:3999 T3_TOKEN=x cargo run
 ```
 
+## Go 서버 (진행 중)
+
+T3 Code 서버를 Go로 다시 구현하는 작업을 `server/`에서 진행하고 있습니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 아직 앱에는 포함되지 않습니다.
+
 ## 라이선스와 출처
 
 `src/text_input.rs`는 GPUI의 `examples/input.rs`(Apache-2.0, Zed Industries)를 바탕으로 수정했습니다. `vendor/xattr`는 xattr 0.2.3(MIT/Apache-2.0)에 최신 libc 호환 수정을 한 줄 더한 사본입니다.

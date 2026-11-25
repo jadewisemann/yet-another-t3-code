@@ -1,0 +1,45 @@
+{
+  "description": "The commands YATT sends for a thread without running an agent: create, open, rename, mark visited, archive. Each change appears on the shell stream; archiving removes the thread from the active list.",
+  "tier": "p1",
+  "steps": [
+    {
+      "op": "call", "as": "project", "method": "projects.mutate",
+      "payload": {
+        "type": "project.create", "commandId": "${uuid:cmd-project}", "projectId": "${uuid:project}",
+        "title": "workspace", "workspaceRoot": "${workspace}"
+      }
+    },
+    { "op": "subscribe", "as": "shell", "method": "orchestration.subscribeShell", "payload": {} },
+    { "op": "await", "stream": "shell", "match": { "kind": "snapshot" } },
+    {
+      "op": "call", "as": "create", "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create", "createdBy": "user", "creationSource": "web",
+        "commandId": "${uuid:cmd-create}", "threadId": "${uuid:thread}", "projectId": "${uuid:project}",
+        "title": "First thread",
+        "modelSelection": { "instanceId": "codex", "model": "gpt-5.5" },
+        "runtimeMode": "full-access", "interactionMode": "default",
+        "branch": null, "worktreePath": null
+      }
+    },
+    { "op": "await", "stream": "shell", "match": { "kind": "thread.updated" } },
+    { "op": "subscribe", "as": "thread", "method": "orchestration.subscribeThread", "payload": { "threadId": "${uuid:thread}" } },
+    { "op": "await", "stream": "thread", "match": { "kind": "snapshot" } },
+    {
+      "op": "call", "as": "rename", "method": "orchestration.dispatchCommand",
+      "payload": { "type": "thread.metadata.update", "commandId": "${uuid:cmd-rename}", "threadId": "${uuid:thread}", "title": "Renamed thread" }
+    },
+    { "op": "await", "stream": "shell", "match": { "kind": "thread.updated", "thread": { "title": "Renamed thread" } } },
+    {
+      "op": "call", "as": "visit", "method": "orchestration.dispatchCommand",
+      "payload": { "type": "thread.visit", "commandId": "${uuid:cmd-visit}", "threadId": "${uuid:thread}", "visitedAt": "${now}", "opened": true }
+    },
+    {
+      "op": "call", "as": "archive", "method": "orchestration.dispatchCommand",
+      "payload": { "type": "thread.archive", "commandId": "${uuid:cmd-archive}", "threadId": "${uuid:thread}" }
+    },
+    { "op": "await", "stream": "shell", "match": { "kind": "thread.removed" } },
+    { "op": "interrupt", "stream": "thread" },
+    { "op": "interrupt", "stream": "shell" }
+  ]
+}
