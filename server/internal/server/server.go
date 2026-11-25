@@ -16,6 +16,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/jadewisemann/yet-another-t3-code/server/internal/store"
 	"github.com/jadewisemann/yet-another-t3-code/server/internal/wire"
 )
 
@@ -40,6 +41,7 @@ type Server struct {
 	envID    string
 	handlers map[string]Handler
 	log      *slog.Logger
+	store    *store.Store
 }
 
 // Handler answers one RPC method. Unary handlers return a value or an error;
@@ -50,13 +52,22 @@ type Handler struct {
 	Run    func(ctx context.Context, payload json.RawMessage, emit func(values ...any) error) error
 }
 
-// TypedError is a failure with a `_tag`, sent as a `Fail` cause.
+// TypedError is a failure with a `_tag`, sent as a `Fail` cause. Fields
+// holds the rest of the error object (message, commandId, ...).
 type TypedError struct {
-	Tag     string `json:"_tag"`
-	Message string `json:"message"`
+	Tag    string
+	Fields map[string]any
 }
 
-func (e *TypedError) Error() string { return e.Tag + ": " + e.Message }
+func (e *TypedError) Error() string { return fmt.Sprintf("%s: %v", e.Tag, e.Fields["message"]) }
+
+func (e *TypedError) MarshalJSON() ([]byte, error) {
+	m := map[string]any{"_tag": e.Tag}
+	for k, v := range e.Fields {
+		m[k] = v
+	}
+	return json.Marshal(m)
+}
 
 func UserData(baseDir string) string { return filepath.Join(baseDir, "userdata") }
 
@@ -69,7 +80,11 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{cfg: cfg, sessions: NewSessions(ud), envID: envID, log: slog.Default()}
+	st, err := store.Open(ud)
+	if err != nil {
+		return nil, err
+	}
+	s := &Server{cfg: cfg, sessions: NewSessions(ud), envID: envID, log: slog.Default(), store: st}
 	s.handlers = s.registerHandlers()
 	return s, nil
 }

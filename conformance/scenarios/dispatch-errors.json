@@ -1,0 +1,23 @@
+{
+  "description": "Commands that refer to a missing project or thread fail with a typed error instead of a defect.",
+  "tier": "p1",
+  "steps": [
+    {
+      "op": "call", "as": "create-without-project", "method": "orchestration.dispatchCommand",
+      "payload": {
+        "type": "thread.create", "createdBy": "user", "creationSource": "web",
+        "commandId": "${uuid:cmd-create}", "threadId": "${uuid:thread}", "projectId": "${uuid:missing-project}",
+        "title": "Orphan", "modelSelection": { "instanceId": "codex", "model": "gpt-5.5" },
+        "runtimeMode": "full-access", "interactionMode": "default", "branch": null, "worktreePath": null
+      }
+    },
+    {
+      "op": "call", "as": "archive-missing", "method": "orchestration.dispatchCommand",
+      "payload": { "type": "thread.archive", "commandId": "${uuid:cmd-archive}", "threadId": "${uuid:missing-thread}" }
+    },
+    {
+      "op": "call", "as": "rename-missing", "method": "orchestration.dispatchCommand",
+      "payload": { "type": "thread.metadata.update", "commandId": "${uuid:cmd-rename}", "threadId": "${uuid:missing-thread}", "title": "x" }
+    }
+  ]
+}
