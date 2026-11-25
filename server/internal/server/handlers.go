@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -171,8 +172,14 @@ func (s *Server) dispatchCommand(ctx context.Context, payload json.RawMessage) (
 			if _, err := needThread(st); err != nil {
 				return "", nil, err
 			}
+			var renamed *bool
+			if cmd.Title != nil {
+				renamed = new(bool)
+				*renamed = true
+			}
 			return store.ThreadMetadataUpdated, store.ThreadMetadata{
-				ThreadID: cmd.ThreadID, Title: cmd.Title, Branch: cmd.Branch, WorktreePath: cmd.WorktreePath, At: now,
+				ThreadID: cmd.ThreadID, Title: cmd.Title, Branch: cmd.Branch, WorktreePath: cmd.WorktreePath,
+				TitleRenamed: renamed, At: now,
 			}, nil
 		case "thread.visit":
 			if _, err := needThread(st); err != nil {
@@ -398,6 +405,7 @@ type launchInput struct {
 		Branch *string `json:"branch"`
 	} `json:"workspaceStrategy"`
 	InitialMessage json.RawMessage `json:"initialMessage"`
+	GenerateTitle  bool            `json:"generateTitle"`
 }
 
 func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any, error) {
@@ -444,7 +452,9 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 	if err != nil && !errors.Is(err, store.ErrDuplicate) {
 		return nil, err
 	}
-	if len(in.InitialMessage) > 0 && string(in.InitialMessage) != "null" && err == nil {
+	created := err == nil
+	var result map[string]any = map[string]any{"threadId": threadID, "resumed": false}
+	if len(in.InitialMessage) > 0 && string(in.InitialMessage) != "null" && created {
 		var first struct {
 			MessageID   *string         `json:"messageId"`
 			Text        string          `json:"text"`
@@ -462,14 +472,32 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 				return nil, err
 			}
 		}
-		msg, _ := json.Marshal(map[string]any{
+		dispatch := map[string]any{
 			"type": "message.dispatch", "commandId": in.CommandID + ":initial-message", "threadId": threadID,
 			"messageId": messageID, "text": first.Text, "attachments": rawOr(first.Attachments, []any{}),
 			"createdBy": "user", "creationSource": source,
-		})
-		if _, err := s.dispatchMessage(ctx, msg); err != nil {
+			"dispatchMode":     map[string]any{"type": "defer_start", "workspaceStrategy": map[string]any{"type": "root"}},
+			"releaseCommandId": in.CommandID + ":release",
+		}
+		if in.GenerateTitle {
+			// Upstream dispatches the first message under the launch's
+			// command id, which names the title request.
+			dispatch["titleSeed"], dispatch["titleRequestId"] = in.Title, in.CommandID
+		}
+		msg, _ := json.Marshal(dispatch)
+		res, after, err := s.dispatchMessageDeferred(ctx, msg)
+		if err != nil {
 			return nil, err
 		}
+		if m, ok := res.(map[string]any); ok {
+			result["sequence"] = m["sequence"]
+		}
+		// The answer shows the run still preparing its workspace.
+		defer func() {
+			if after != nil {
+				go after()
+			}
+		}()
 	}
 	var projection map[string]any
 	s.store.Read(func(st *store.State, _ int64) {
@@ -477,7 +505,25 @@ func (s *Server) launchThread(ctx context.Context, payload json.RawMessage) (any
 			projection = renderThreadProjection(t)
 		}
 	})
-	return map[string]any{"threadId": threadID, "resumed": false, "projection": projection}, nil
+	result["projection"] = projection
+	if created {
+		// Upstream records the prepared workspace after the claim.
+		defer s.recordLaunchWorkspace(in.CommandID+":workspace", threadID)
+	}
+	return result, nil
+}
+
+func (s *Server) recordLaunchWorkspace(commandID, threadID string) {
+	_, err := s.store.Decide(context.Background(), commandID, func(st *store.State) (string, any, error) {
+		t, ok := st.Threads[threadID]
+		if !ok {
+			return "", nil, errors.New("thread not found: " + threadID)
+		}
+		return store.ThreadMetadataUpdated, store.ThreadMetadata{ThreadID: threadID, Branch: t.Branch, At: store.Now()}, nil
+	})
+	if err != nil && !errors.Is(err, store.ErrDuplicate) {
+		s.log.Warn("launch workspace", slog.String("error", err.Error()))
+	}
 }
 
 // gitBranch reads the checked-out branch of a repository without running

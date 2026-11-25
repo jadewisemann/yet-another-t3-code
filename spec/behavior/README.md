@@ -15,3 +15,4 @@
 | `threads.md` | P1 |
 | `auth.md` | P1 |
 | `runs.md` | P2 |
+| `titles.md` | P2 |

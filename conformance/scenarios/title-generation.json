@@ -1,0 +1,127 @@
+{
+  "description": "launchThread as YATT sends it with a first message and generateTitle true. The thread keeps the seed title while a title is generated with `codex exec` (the fake codex answers \"Fake title: <message>\"), then takes the generated title. The turn runs at the same time, so the shell values are set aside and only the first one with a title request and the first one with both the new title and the completed run are recorded.",
+  "tier": "p2",
+  "steps": [
+    {
+      "op": "call",
+      "method": "projects.mutate",
+      "payload": {
+        "type": "project.create",
+        "commandId": "${uuid:cmd-project}",
+        "projectId": "${uuid:project}",
+        "title": "workspace",
+        "workspaceRoot": "${workspace}"
+      }
+    },
+    {
+      "op": "subscribe",
+      "as": "shell",
+      "method": "orchestration.subscribeShell",
+      "payload": {},
+      "aside": [
+        {
+          "kind": "thread.updated",
+          "thread": {
+            "titleRegeneration": "$present"
+          }
+        },
+        {
+          "kind": "thread.updated",
+          "thread": {
+            "title": "Fake title: name this thread",
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "match": {
+        "kind": "snapshot"
+      }
+    },
+    {
+      "op": "call",
+      "as": "launch",
+      "method": "orchestration.launchThread",
+      "payload": {
+        "commandId": "${uuid:cmd-launch}",
+        "creationSource": "web",
+        "threadId": "${uuid:thread}",
+        "projectId": "${uuid:project}",
+        "title": "name this thread",
+        "generateTitle": true,
+        "modelSelection": {
+          "instanceId": "codex",
+          "model": "gpt-5.5"
+        },
+        "runtimeMode": "full-access",
+        "interactionMode": "default",
+        "workspaceStrategy": {
+          "type": "root"
+        },
+        "initialMessage": {
+          "messageId": "${uuid:message}",
+          "text": "name this thread",
+          "attachments": []
+        }
+      }
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "titleRegeneration": "$present"
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "await",
+      "stream": "shell",
+      "fromAside": true,
+      "match": {
+        "kind": "thread.updated",
+        "thread": {
+          "title": "Fake title: name this thread",
+          "status": "completed"
+        }
+      },
+      "record": "match",
+      "ignore": [
+        "sequence"
+      ]
+    },
+    {
+      "op": "interrupt",
+      "stream": "shell"
+    },
+    {
+      "op": "subscribe",
+      "as": "thread",
+      "method": "orchestration.subscribeThread",
+      "payload": {
+        "threadId": "${uuid:thread}"
+      }
+    },
+    {
+      "op": "await",
+      "stream": "thread",
+      "match": {
+        "kind": "snapshot"
+      },
+      "record": "match"
+    },
+    {
+      "op": "interrupt",
+      "stream": "thread"
+    }
+  ]
+}

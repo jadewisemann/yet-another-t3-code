@@ -25,7 +25,30 @@ if (args[0] === "app-server" && args.includes("--help")) {
   process.stdout.write("Usage: codex app-server [OPTIONS]\n\nOptions:\n  --listen <URL>\n  -h, --help\n");
   process.exit(0);
 }
-if (args[0] !== "app-server") {
+// `codex mcp list --json` (after any --config flags): no MCP servers.
+if (args.includes("mcp") && args.includes("list")) {
+  log("argv", args);
+  process.stdout.write("[]\n");
+  process.exit(0);
+}
+// `codex exec ... --output-last-message <file> -`: text generation. The
+// prompt arrives on stdin; the answer is a title made from the user message.
+if (args[0] === "exec") {
+  let prompt = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => (prompt += chunk));
+  process.stdin.on("end", () => {
+    const at = (flag) => args[args.indexOf(flag) + 1];
+    const schema = readFileSync(at("--output-schema"), "utf8");
+    log("exec", { args, prompt, schema });
+    if (process.env.FAKE_CODEX_EXEC_DUMP)
+      appendFileSync(process.env.FAKE_CODEX_EXEC_DUMP, `${JSON.stringify({ args, prompt, schema })}\n`);
+    const message = prompt.split("\nUser message:\n")[1]?.split("\n")[0] ?? "";
+    writeFileSync(at("--output-last-message"), JSON.stringify({ title: `Fake title: ${message}`, needsRefinement: false }));
+    process.exit(0);
+  });
+  await new Promise(() => {}); // the app-server code below never runs
+} else if (args[0] !== "app-server") {
   log("argv", args);
   process.stderr.write(`fake codex: unsupported arguments: ${args.join(" ")}\n`);
   process.exit(2);

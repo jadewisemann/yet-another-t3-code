@@ -61,8 +61,12 @@
 
 - RUN-19. 실행이 끝날 때 기록하는 체크포인트의 `files`는 이전 체크포인트 ref와 새 ref 사이의 `git diff --numstat -z` 결과입니다. 각 파일은 `{path, kind: "modified", additions, deletions}`이고(바이너리는 0), 이름이 바뀐 파일은 새 경로를 쓰며, 경로의 `localeCompare` 순서로 정렬됩니다. 체크포인트 turn item의 `files`도 같은 목록입니다. 두 체크포인트 사이에 HEAD가 움직였다면 턴이 쓴 경로(양쪽 끝의 커밋되지 않은 변경, 그 사이에 만든 커밋의 경로)만 남깁니다. 클라이언트에 보내는 형태에서는 200개까지만 보내고, 넘치면 `filesTotal`(`count`, `additions`, `deletions`)을 붙입니다. (`agent-items`)
 
+## 작업 공간 준비 (`defer_start`)
+
+- RUN-20. `launchThread`가 보내는 첫 메시지는 `dispatchMode: {type: "defer_start", workspaceStrategy}`로 들어갑니다. 실행은 `status: "preparing"`과 `workspacePreparation`(작업 공간 전략)을 갖고, root node의 `checkpointScopeId`는 `null`이며 `checkpoint-scope.created`는 아직 없습니다. 사용자 turn item 바로 다음 `ordinal`에 `turn-item:provider:codex:native-item:<enc("workspace-preparation:"+runId)>` 항목(`type: "command_execution"`, `input`과 `title`은 `"Preparing workspace"`, `running`)이 생깁니다. `launchThread`의 응답은 이 상태를 담습니다. 그다음 `<commandId>:release` 명령이 `checkpoint-scope.created`, scope가 채워진 `node.updated`, 완료된 준비 항목(`title: "Workspace ready"`, `output: "Workspace preparation completed."`, `exitCode: 0`), `run.updated`(`starting`)를 기록하고 턴을 시작합니다. root 전략에서는 준비할 것이 없어 바로 이어집니다. (`title-generation`)
+
 ## yatt-server 구현 메모
 
 - v2 이벤트(`run.*`, `node.updated`, `message.updated` 등)는 업스트림이 스레드 스트림에 보내는 봉투 그대로 저장하고, 업스트림의 `applyToProjection`처럼 id 기준 upsert로 접습니다(`server/internal/store/v2.go`). 스냅샷의 목록 순서는 업스트림 스냅샷 쿼리의 `ORDER BY`를 따릅니다.
 - codex 프로세스는 프로바이더 인스턴스마다 하나를 공유합니다(`provider-session:provider-instance:codex:shared`). 실행 파일은 `PATH`의 `codex`이고, `YATT_CODEX_BIN`으로 바꿀 수 있습니다.
-- 아직 다루지 않는 것: 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 권한 승인(`item/permissions/requestApproval`)과 MCP 도구, 웹 검색, 계획, 하위 에이전트 같은 나머지 항목(codex의 다른 서버 요청은 오류로 응답), 명령 출력 스트림(`subscribeCommandOutput`), HEAD가 움직였을 때 fetch로 들어온 커밋을 턴의 경로에서 빼는 처리, T3 MCP 도구와 추가 지시문(`additionalContext`).
+- 아직 다루지 않는 것: worktree 작업 공간 전략과 설정 스크립트, 대기열 보류(`queueHeld`)와 중지 후 대기열 처리(yatt-server는 중지되거나 실패한 실행 뒤에도 다음 대기 실행을 시작합니다), 권한 승인(`item/permissions/requestApproval`)과 MCP 도구, 웹 검색, 계획, 하위 에이전트 같은 나머지 항목(codex의 다른 서버 요청은 오류로 응답), 명령 출력 스트림(`subscribeCommandOutput`), HEAD가 움직였을 때 fetch로 들어온 커밋을 턴의 경로에서 빼는 처리, T3 MCP 도구와 추가 지시문(`additionalContext`).
