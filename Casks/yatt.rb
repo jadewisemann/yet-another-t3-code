@@ -4,7 +4,7 @@ cask "yatt" do
 
   url "https://github.com/jadewisemann/yet-another-t3-code/releases/download/v#{version}/YATT-macos-arm64.zip"
   name "YATT"
-  desc "Native GPUI client for the T3 Code server"
+  desc "Native GPUI client for T3 Code with its own Go server"
   homepage "https://github.com/jadewisemann/yet-another-t3-code"
 
   depends_on arch: :arm64
@@ -20,5 +20,8 @@ cask "yatt" do
         must_succeed: false
   end
 
-  zap trash: "~/Library/Application Support/yatt"
+  zap trash: [
+    "~/.yatt",
+    "~/Library/Application Support/yatt",
+  ]
 end

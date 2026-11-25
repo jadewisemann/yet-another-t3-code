@@ -132,7 +132,8 @@ impl TextInput {
         let target = self
             .content
             .unicode_word_indices()
-            .map(|(index, _)| index).rfind(|index| *index < offset)
+            .map(|(index, _)| index)
+            .rfind(|index| *index < offset)
             .unwrap_or(0);
         self.move_to(target, cx);
     }

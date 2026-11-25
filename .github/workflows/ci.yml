@@ -25,16 +25,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
       - run: cargo test --locked
       - run: cargo build --release --locked
       - name: Bundle YATT.app
         run: |
           scripts/bundle-macos.sh target/release
-      - name: Start the bundled T3 Code server and pair with it
+      - name: Start the bundled server and pair with it
         run: |
           codesign --verify --deep --strict target/release/YATT.app
-          target/release/YATT.app/Contents/Resources/t3/t3 --version
-          T3CODE_HOME="$RUNNER_TEMP/t3home" YATT_CONFIG_DIR="$RUNNER_TEMP/yatt" \
+          target/release/YATT.app/Contents/Resources/yatt-server --version
+          YATT_SERVER_HOME="$RUNNER_TEMP/server" YATT_CONFIG_DIR="$RUNNER_TEMP/yatt" \
             target/release/YATT.app/Contents/MacOS/yatt pair || { cat "$RUNNER_TEMP/yatt/server.log"; exit 1; }
       - name: Zip YATT.app
         run: |

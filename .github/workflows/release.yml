@@ -34,6 +34,11 @@ jobs:
           fi
       - uses: Swatinem/rust-cache@v2
         if: steps.version.outputs.exists == 'false'
+      - uses: actions/setup-go@v5
+        if: steps.version.outputs.exists == 'false'
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
       - name: Build YATT.app
         if: steps.version.outputs.exists == 'false'
         run: |
