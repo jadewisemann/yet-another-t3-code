@@ -47,6 +47,10 @@ actions!(
         ToggleDiff,
         /// Switch the diff between all turns and the last turn.
         ToggleDiffScope,
+        /// Show or hide the open thread's terminal.
+        ToggleTerminal,
+        /// Clear the terminal.
+        ClearTerminal,
         /// Stop the running turn in the open thread.
         StopThread,
         /// Archive the open thread.
@@ -82,6 +86,8 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
         ("Toggle sidebar", Box::new(ToggleSidebar)),
         ("Show changes", Box::new(ToggleDiff)),
         ("Changes: all turns / last turn", Box::new(ToggleDiffScope)),
+        ("Show terminal", Box::new(ToggleTerminal)),
+        ("Clear terminal", Box::new(ClearTerminal)),
         ("Stop turn", Box::new(StopThread)),
         ("Archive thread", Box::new(ArchiveThread)),
         ("Show shortcuts", Box::new(ToggleShortcuts)),
@@ -92,7 +98,7 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
 
 fn default_bindings() -> Vec<KeyBinding> {
     use text_input::*;
-    vec![
+    let mut bindings = vec![
         // Text editing inside any input.
         KeyBinding::new("backspace", Backspace, Some("TextInput")),
         KeyBinding::new("delete", Delete, Some("TextInput")),
@@ -131,6 +137,7 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-b", ToggleSidebar, Some("Workspace")),
         KeyBinding::new("secondary-shift-d", ToggleDiff, Some("Workspace")),
         KeyBinding::new("secondary-alt-d", ToggleDiffScope, Some("Workspace")),
+        KeyBinding::new("ctrl-`", ToggleTerminal, Some("Workspace")),
         KeyBinding::new("secondary-.", StopThread, Some("Workspace")),
         KeyBinding::new(
             "secondary-shift-backspace",
@@ -141,7 +148,35 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-shift-,", ReloadConfig, Some("Workspace")),
         KeyBinding::new("secondary-,", OpenConfigFolder, Some("Workspace")),
         KeyBinding::new("secondary-q", Quit, None),
-    ]
+    ];
+    if cfg!(target_os = "macos") {
+        bindings.push(KeyBinding::new("cmd-j", ToggleTerminal, Some("Workspace")));
+        bindings.push(KeyBinding::new("cmd-k", ClearTerminal, Some("Terminal")));
+    } else {
+        bindings.push(KeyBinding::new(
+            "ctrl-shift-k",
+            ClearTerminal,
+            Some("Terminal"),
+        ));
+    }
+    // Keys the shell needs more than the app does: inside the terminal they go to the shell.
+    for keys in terminal_keys() {
+        bindings.push(KeyBinding::new(keys, NoAction, Some("Terminal")));
+    }
+    bindings
+}
+
+/// Workspace keys that the terminal passes to the shell instead. On macOS the app's keys
+/// use cmd, so only a few clash; elsewhere they use ctrl, which shells use for editing.
+fn terminal_keys() -> &'static [&'static str] {
+    if cfg!(target_os = "macos") {
+        &["alt-up", "alt-down", "f2"]
+    } else {
+        &[
+            "f2", "ctrl-n", "ctrl-l", "ctrl-b", "ctrl-]", "ctrl-[", "ctrl-.", "ctrl-/", "ctrl-,",
+            "ctrl-q", "alt-up", "alt-down",
+        ]
+    }
 }
 
 #[derive(Deserialize)]

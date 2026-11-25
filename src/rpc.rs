@@ -51,6 +51,16 @@ pub enum RpcEvent {
         key: String,
         result: Result<Value, String>,
     },
+    /// A value from the attached terminal's stream.
+    Terminal {
+        key: String,
+        value: Value,
+    },
+    /// The attached terminal's stream ended, with the failure if it failed.
+    TerminalEnded {
+        key: String,
+        error: Option<String>,
+    },
 }
 
 #[derive(Debug)]
@@ -71,6 +81,8 @@ enum RpcCommand {
         method: &'static str,
         payload: Value,
     },
+    /// Follows one terminal at a time; `None` stops following.
+    AttachTerminal(Option<(String, Value)>),
 }
 
 #[derive(Clone)]
@@ -97,6 +109,12 @@ impl RpcHandle {
 
     pub fn mutate_project(&self, input: Value) {
         let _ = self.tx.send(RpcCommand::MutateProject { input });
+    }
+
+    /// Streams one terminal (`terminal.attach` with `payload`) as `RpcEvent::Terminal`
+    /// values tagged `key`, re-attaching after a reconnect; `None` detaches.
+    pub fn attach_terminal(&self, terminal: Option<(String, Value)>) {
+        let _ = self.tx.send(RpcCommand::AttachTerminal(terminal));
     }
 
     /// Calls a unary method; the answer comes back as `RpcEvent::QueryResult` with `key`.
@@ -130,6 +148,7 @@ enum Pending {
     Call(String),
     Launch,
     Query(String),
+    Terminal(String),
 }
 
 enum SessionEnd {
@@ -145,10 +164,19 @@ async fn run(
     events: async_channel::Sender<RpcEvent>,
 ) {
     let mut followed_thread: Option<String> = None;
+    let mut followed_terminal: Option<(String, Value)> = None;
     let mut backoff = Duration::from_millis(500);
     loop {
         let _ = events.send(RpcEvent::Connecting).await;
-        match session(&connection, &mut commands, &events, &mut followed_thread).await {
+        match session(
+            &connection,
+            &mut commands,
+            &events,
+            &mut followed_thread,
+            &mut followed_terminal,
+        )
+        .await
+        {
             SessionEnd::Closed => return,
             SessionEnd::Unauthorized(reason) => {
                 let _ = events.send(RpcEvent::Unauthorized(reason)).await;
@@ -167,6 +195,7 @@ async fn run(
                 command = commands.recv() => match command {
                     None => return,
                     Some(RpcCommand::SubscribeThread(id)) => followed_thread = id,
+                    Some(RpcCommand::AttachTerminal(terminal)) => followed_terminal = terminal,
                     Some(RpcCommand::Dispatch { label, .. }) => {
                         let _ = events.send(RpcEvent::CommandFailed {
                             label,
@@ -203,6 +232,7 @@ async fn session(
     commands: &mut mpsc::UnboundedReceiver<RpcCommand>,
     events: &async_channel::Sender<RpcEvent>,
     followed_thread: &mut Option<String>,
+    followed_terminal: &mut Option<(String, Value)>,
 ) -> SessionEnd {
     let request = match build_request(connection) {
         Ok(request) => request,
@@ -233,6 +263,7 @@ async fn session(
     let mut next_id: u64 = 1;
     let mut pending: HashMap<String, Pending> = HashMap::new();
     let mut thread_request: Option<String> = None;
+    let mut terminal_request: Option<String> = None;
 
     macro_rules! send {
         ($value:expr) => {
@@ -264,6 +295,14 @@ async fn session(
             method::SUBSCRIBE_THREAD,
             json!({ "threadId": thread_id }),
             Pending::Thread(thread_id)
+        ));
+    }
+
+    if let Some((key, payload)) = followed_terminal.clone() {
+        terminal_request = Some(request!(
+            method::TERMINAL_ATTACH,
+            payload,
+            Pending::Terminal(key)
         ));
     }
 
@@ -306,6 +345,20 @@ async fn session(
                     }
                     RpcCommand::Query { key, method, payload } => {
                         request!(method, payload, Pending::Query(key));
+                    }
+                    RpcCommand::AttachTerminal(terminal) => {
+                        if let Some(old) = terminal_request.take() {
+                            pending.remove(&old);
+                            send!(json!({ "_tag": "Interrupt", "requestId": old }));
+                        }
+                        *followed_terminal = terminal.clone();
+                        if let Some((key, payload)) = terminal {
+                            terminal_request = Some(request!(
+                                method::TERMINAL_ATTACH,
+                                payload,
+                                Pending::Terminal(key)
+                            ));
+                        }
                     }
                 }
             }
@@ -352,6 +405,14 @@ async fn session(
                                         }
                                     }
                                 }
+                                Some(Pending::Terminal(key)) => {
+                                    for value in values {
+                                        let _ = events.send(RpcEvent::Terminal {
+                                            key: key.clone(),
+                                            value,
+                                        }).await;
+                                    }
+                                }
                                 _ => {}
                             }
                             // Streams stall until the client acknowledges each chunk.
@@ -378,6 +439,13 @@ async fn session(
                                             error,
                                         }).await;
                                     }
+                                }
+                                Pending::Terminal(key) => {
+                                    if terminal_request.as_deref() == Some(request_id.as_str()) {
+                                        terminal_request = None;
+                                        *followed_terminal = None;
+                                    }
+                                    let _ = events.send(RpcEvent::TerminalEnded { key, error: failure }).await;
                                 }
                                 Pending::Call(label) => {
                                     if let Some(error) = failure {

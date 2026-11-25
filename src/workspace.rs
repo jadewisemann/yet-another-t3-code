@@ -17,6 +17,7 @@ use crate::protocol::{
     ThreadShell, ThreadStreamItem, TurnLedger,
 };
 use crate::rpc::{self, RpcEvent, RpcHandle};
+use crate::terminal::TerminalPanel;
 use crate::text_input::{InputEvent, TextInput};
 use crate::theme::{self, Palette, Theme};
 
@@ -103,6 +104,8 @@ pub struct Workspace {
     turns: TurnLedger,
     /// Set while the diff panel is open.
     diff: Option<DiffView>,
+    terminal: Option<Entity<TerminalPanel>>,
+    terminal_visible: bool,
     /// Files picked for the next message.
     attachments: Vec<PendingAttachment>,
     /// The server's origin, for uploads.
@@ -180,6 +183,8 @@ impl Workspace {
             requests: Vec::new(),
             turns: TurnLedger::default(),
             diff: None,
+            terminal: None,
+            terminal_visible: false,
             attachments: Vec::new(),
             server_url: None,
             next_query: 0,
@@ -263,8 +268,25 @@ impl Workspace {
             RpcEvent::CommandFailed { label, error } => {
                 self.notice = Some(format!("{label} failed: {error}"));
             }
+            RpcEvent::Terminal { key, value } => {
+                if let Some(panel) = self.terminal_for(&key, cx) {
+                    panel.update(cx, |panel, cx| panel.on_event(value, cx));
+                }
+            }
+            RpcEvent::TerminalEnded { key, error } => {
+                if let Some(panel) = self.terminal_for(&key, cx) {
+                    panel.update(cx, |panel, cx| panel.on_ended(error, cx));
+                }
+            }
             RpcEvent::QueryResult { key, result } => {
-                if let Some(local) = key.strip_prefix("upload:") {
+                if key.starts_with("terminal") {
+                    if let Some(panel) = self.terminal_for(&key, cx) {
+                        panel.update(cx, |panel, _| panel.on_write_done());
+                    }
+                    if let Err(error) = result {
+                        self.notice = Some(format!("Terminal: {error}"));
+                    }
+                } else if let Some(local) = key.strip_prefix("upload:") {
                     self.on_upload_url(local, result, window, cx);
                 } else {
                     self.on_query_result(key, result);
@@ -435,6 +457,158 @@ impl Workspace {
         };
     }
 
+    fn terminal_for(&self, key: &str, cx: &App) -> Option<Entity<TerminalPanel>> {
+        self.terminal
+            .clone()
+            .filter(|panel| panel.read(cx).key == key)
+    }
+
+    /// Keeps the terminal on the open thread: a shown terminal follows the selection, and a
+    /// hidden one for another thread is let go (its shell keeps running on the server).
+    fn sync_terminal(&mut self, cx: &mut Context<Self>) {
+        let current = self
+            .terminal
+            .as_ref()
+            .map(|panel| panel.read(cx).thread_id.clone());
+        if current.is_some() && current == self.selected_thread {
+            return;
+        }
+        if let Some(panel) = self.terminal.take() {
+            panel.read(cx).detach();
+        }
+        if !self.terminal_visible {
+            return;
+        }
+        let (Some(rpc), Some(thread_id)) = (self.rpc.clone(), self.selected_thread.clone()) else {
+            self.terminal_visible = false;
+            return;
+        };
+        let Some(cwd) = self.thread_folder(&thread_id) else {
+            self.terminal_visible = false;
+            self.notice = Some("Terminal: the thread's folder is unknown".into());
+            return;
+        };
+        self.terminal = Some(cx.new(|cx| TerminalPanel::new(rpc, thread_id, cwd, cx)));
+    }
+
+    /// Where the thread's agent runs: its worktree, or its project's folder.
+    fn thread_folder(&self, thread_id: &str) -> Option<String> {
+        let thread = self.threads.get(thread_id)?;
+        if let Some(path) = &thread.worktree_path {
+            return Some(path.clone());
+        }
+        self.projects
+            .iter()
+            .find(|p| p.id == thread.project_id)
+            .map(|p| p.workspace_root.clone())
+            .filter(|root| !root.is_empty())
+    }
+
+    fn toggle_terminal(&mut self, _: &ToggleTerminal, window: &mut Window, cx: &mut Context<Self>) {
+        if self.terminal_visible {
+            let focused = self
+                .terminal
+                .as_ref()
+                .is_some_and(|panel| panel.focus_handle(cx).is_focused(window));
+            if !focused && let Some(panel) = &self.terminal {
+                window.focus(&panel.focus_handle(cx));
+                cx.notify();
+                return;
+            }
+            self.terminal_visible = false;
+            window.focus(&self.composer.focus_handle(cx));
+        } else {
+            if self.selected_thread.is_none() {
+                self.notice = Some("Open a thread to use its terminal.".into());
+                cx.notify();
+                return;
+            }
+            self.terminal_visible = true;
+            self.sync_terminal(cx);
+            if let Some(panel) = &self.terminal {
+                window.focus(&panel.focus_handle(cx));
+            }
+        }
+        cx.notify();
+    }
+
+    fn clear_terminal(&mut self, _: &ClearTerminal, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(panel) = &self.terminal {
+            panel.update(cx, |panel, cx| panel.clear(cx));
+        }
+    }
+
+    fn render_terminal(
+        &self,
+        p: Palette,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        if !self.terminal_visible {
+            return None;
+        }
+        let panel = self.terminal.clone()?;
+        let folder = self
+            .selected_thread
+            .as_deref()
+            .and_then(|id| self.thread_folder(id))
+            .unwrap_or_default();
+        Some(
+            div()
+                .h(px(280.))
+                .flex()
+                .flex_col()
+                .border_t_1()
+                .border_color(p.border)
+                .child(
+                    div()
+                        .h(px(32.))
+                        .px_4()
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .text_sm()
+                        .child(div().font_weight(FontWeight::SEMIBOLD).child("Terminal"))
+                        .child(
+                            div()
+                                .flex_1()
+                                .text_xs()
+                                .text_color(p.muted)
+                                .truncate()
+                                .child(folder),
+                        )
+                        .child(
+                            button(
+                                "terminal-clear",
+                                format!("Clear  {}", window.keystroke_text_for(&ClearTerminal)),
+                                p,
+                            )
+                            .on_click(cx.listener(
+                                |this, _: &ClickEvent, window, cx| {
+                                    this.clear_terminal(&ClearTerminal, window, cx)
+                                },
+                            )),
+                        )
+                        .child(
+                            button(
+                                "terminal-close",
+                                format!("Hide  {}", window.keystroke_text_for(&ToggleTerminal)),
+                                p,
+                            )
+                            .on_click(cx.listener(
+                                |this, _: &ClickEvent, window, cx| {
+                                    this.terminal_visible = false;
+                                    window.focus(&this.composer.focus_handle(cx));
+                                    cx.notify();
+                                },
+                            )),
+                        ),
+                )
+                .child(div().flex_1().min_h_0().child(panel))
+                .into_any_element(),
+        )
+    }
+
     fn toggle_diff(&mut self, _: &ToggleDiff, _: &mut Window, cx: &mut Context<Self>) {
         if self.diff.take().is_none() {
             self.diff = Some(DiffView {
@@ -601,6 +775,7 @@ impl Workspace {
             if let Some(rpc) = &self.rpc {
                 rpc.subscribe_thread(thread_id.clone());
             }
+            self.sync_terminal(cx);
         }
         if let Some(thread_id) = &thread_id
             && let Some(rpc) = &self.rpc
@@ -2052,6 +2227,8 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::toggle_sidebar))
             .on_action(cx.listener(Self::toggle_diff))
             .on_action(cx.listener(Self::toggle_diff_scope))
+            .on_action(cx.listener(Self::toggle_terminal))
+            .on_action(cx.listener(Self::clear_terminal))
             .on_action(cx.listener(Self::toggle_shortcuts))
             .on_action(cx.listener(Self::stop_thread))
             .on_action(cx.listener(Self::archive_thread))
@@ -2082,7 +2259,8 @@ impl Render for Workspace {
             .child(self.render_header(p, window, cx))
             .child(self.render_messages(p, cx))
             .children(self.render_requests(p, cx))
-            .child(self.render_composer(p, window, cx));
+            .child(self.render_composer(p, window, cx))
+            .children(self.render_terminal(p, window, cx));
 
         root.child(
             div()

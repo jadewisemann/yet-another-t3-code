@@ -137,7 +137,7 @@ func Run(ctx context.Context, sc Scenario, t *Target, sp *spec.Spec) (*Result, e
 					if st.Record == "keys" && exit.Tag == "Success" {
 						return Entry{Step: step, Op: "call", As: st.As, Method: st.Method, Exit: map[string]any{"_tag": "Success", "valueKeys": shape(n, exit.Value, "keys")}}
 					}
-					return Entry{Step: step, Op: "call", As: st.As, Method: st.Method, Exit: n.Value(exitRaw)}
+					return Entry{Step: step, Op: "call", As: st.As, Method: st.Method, Exit: ignoreFields(n.Value(exitRaw), st.Ignore)}
 				})
 			} else {
 				id, ch, err := client.Start(st.Method, payload)

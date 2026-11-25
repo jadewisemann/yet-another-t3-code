@@ -48,6 +48,9 @@ type Server struct {
 	log      *slog.Logger
 	store    *store.Store
 	runs     *runner
+
+	terminals         *terminalManager
+	terminalManagerID string
 }
 
 // Handler answers one RPC method. Unary handlers return a value or an error;
@@ -63,9 +66,17 @@ type Handler struct {
 type TypedError struct {
 	Tag    string
 	Fields map[string]any
+	// Text is the message for an error whose wire form has none (upstream
+	// errors whose message is a getter).
+	Text string
 }
 
-func (e *TypedError) Error() string { return fmt.Sprintf("%s: %v", e.Tag, e.Fields["message"]) }
+func (e *TypedError) Error() string {
+	if e.Text != "" {
+		return e.Tag + ": " + e.Text
+	}
+	return fmt.Sprintf("%s: %v", e.Tag, e.Fields["message"])
+}
 
 func (e *TypedError) MarshalJSON() ([]byte, error) {
 	m := map[string]any{"_tag": e.Tag}
@@ -92,10 +103,15 @@ func New(cfg Config) (*Server, error) {
 	}
 	s := &Server{cfg: cfg, sessions: NewSessions(ud), envID: envID, log: slog.Default(), store: st}
 	s.runs = newRunner(s)
+	s.terminals = newTerminalManager()
+	s.terminalManagerID, _ = newUUID()
 	st.Render = renderThreadEvent
 	s.handlers = s.registerHandlers()
 	return s, nil
 }
+
+// CloseTerminals ends every terminal's shell, for shutdown.
+func (s *Server) CloseTerminals() { s.terminals.closeAll() }
 
 func newUUID() (string, error) {
 	b := make([]byte, 16)

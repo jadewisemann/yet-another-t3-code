@@ -1,0 +1,12 @@
+# 터미널
+
+스레드마다 여는 셸 터미널입니다. 업스트림 `TerminalManager`(`src/terminal/Manager.ts`)와 같은 규칙을 따릅니다. (`terminal`)
+
+- TERM-1. 터미널은 `(threadId, terminalId)`마다 하나이고, 셸 하나를 PTY에서 실행합니다. 셸은 요청 `env`나 서버 환경의 `T3CODE_TERMINAL_SHELL`, `$SHELL`, `/bin/zsh`, `/bin/bash`, `/bin/sh`, `zsh`, `bash`, `sh` 가운데 처음으로 찾은 것입니다. zsh에는 `-o nopromptsp`, macOS의 bash에는 `-l`을 붙입니다. 셸 환경에서는 `T3CODE_`, `VITE_`로 시작하는 변수와 tmux, screen, zellij 변수를 빼고, `TERM_PROGRAM=t3code`, `T3CODE_THREAD_ID=<threadId>`, `COLORTERM=truecolor`(없을 때)를 넣습니다. 요청 `env`가 그 위에 덮어씁니다.
+- TERM-2. `terminal.open`은 터미널이 없으면 만들고(기본 크기 120x30) 셸을 시작해 스냅샷을 돌려줍니다. 이미 있으면, `cwd`나 `env`나 worktree가 바뀐 경우 셸을 멈추고 기록을 비운 뒤 다시 시작하고, 셸이 끝난 경우 기록을 비우고 다시 시작하고, 실행 중이면 크기만 맞춥니다. `cwd`가 없으면 `TerminalCwdNotFoundError`, 폴더가 아니면 `TerminalCwdNotDirectoryError`입니다.
+- TERM-3. 스냅샷은 `{threadId, terminalId, cwd, worktreePath, status, pid, history, exitCode, exitSignal, label, updatedAt, sequence, cols, rows}`이고, 시작에 실패하면 `error`가 붙습니다. `label`은 `term-<n>`이면 `Terminal <n>`, 아니면 id입니다. 터미널에 생긴 일(시작, 출력, 크기 변경, 비우기, 종료, 닫기)은 모두 `sequence`를 하나씩 올리는 이벤트입니다.
+- TERM-4. `terminal.attach`는 스트림입니다. 터미널이 없으면 `cwd`로 열고(`cwd`가 없으면 `TerminalSessionLookupError`, `resume`이고 닫힌 터미널이면 `closed` 하나), 셸이 끝났고 `restartIfNotRunning`이면 다시 시작하고, 크기가 다르면 맞춥니다. 첫 값은 `{type: "snapshot", snapshot}`이고, 그 뒤로 `output`(`data`), `activity`(크기 변경: `hasRunningSubprocess`, `label`, `cols`, `rows`), `cleared`, `exited`(`exitCode`, `exitSignal`; 신호가 없으면 0), `error`, `closed`, 그리고 다시 시작할 때 `snapshot`을 보냅니다. `maxHistoryBytes`가 있으면 스냅샷의 기록을 그만큼만 남깁니다. `terminal.observe`는 터미널을 열지 않는 같은 스트림이며, 없는 터미널이면 `TerminalSessionLookupError`입니다.
+- TERM-5. `terminal.write`는 셸에 `data`를 보내고, `terminal.resize`는 크기를 바꿉니다(실행 중이고 크기가 다를 때만). 끝난 셸에 쓰면 아무 일도 없고, 시작하지 못한 셸이면 `TerminalNotRunningError`, 없는 터미널이면 `TerminalSessionLookupError`입니다. `terminal.clear`는 기록을 비우고 `cleared`를 보냅니다. `terminal.close`는 셸을 멈추고(SIGTERM, 1초 뒤 SIGKILL) 터미널을 지운 뒤 `closed`를 보내며, `terminalId`가 없으면 그 스레드의 터미널을 모두 닫습니다.
+- TERM-6. 기록은 출력의 마지막 5000줄, 8MB까지입니다. 다시 그릴 때 셸에 응답이 입력되지 않도록, 터미널에 응답을 요구하는 제어 시퀀스(상태와 커서 위치 보고, 장치 속성, 색상 질의)는 기록에서 뺍니다.
+- TERM-7. `subscribeTerminalMetadata`는 `{type: "snapshot", terminals, managerId}`를 보낸 뒤, 터미널이 시작하거나 끝나거나 크기가 바뀌면 `{type: "upsert", terminal}`을, 닫히면 `{type: "remove", threadId, terminalId}`를 보냅니다. 요약에는 기록 대신 `hasRunningSubprocess`가 있습니다.
+- 아직 다루지 않는 것: 서버를 다시 시작한 뒤에도 남는 기록 파일, 셸에서 실행 중인 하위 프로세스 감지(`hasRunningSubprocess`는 늘 false이고 `label`은 터미널 이름입니다), 여러 화면이 크기를 나누는 처리, 출력 창 크기에 따른 흐름 제어, 없어진 worktree 다시 만들기, Windows 셸.
