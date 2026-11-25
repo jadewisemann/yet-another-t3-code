@@ -129,7 +129,11 @@ function startTurn(id, params) {
   const threadId = params.threadId;
   const turnId = `fake-turn-${++turnCounter}`;
   const text = (params.input ?? []).map((i) => i.text ?? "").join("");
-  const reply = `fake codex reply to: ${text}`;
+  // A turn whose text starts with "inputs" replies with the turn's input
+  // items, so a scenario sees how attachments reach the agent.
+  const reply = text.startsWith("inputs")
+    ? `fake codex inputs: ${JSON.stringify(params.input ?? [])}`
+    : `fake codex reply to: ${text}`;
   const turn = { id: turnId, items: [], status: "inProgress" };
   respond(id, resultOf("turn/start", { turn }));
   const itemId = `fake-item-${turnCounter}`;

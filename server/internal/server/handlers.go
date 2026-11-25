@@ -27,6 +27,8 @@ func (s *Server) registerHandlers() map[string]Handler {
 		"orchestration.launchThread":      {Unary: s.launchThread},
 		"server.getConfig":                {Unary: s.getConfig},
 		"orchestration.getTurnDiff":       {Unary: s.getTurnDiff},
+		"attachments.createUploadUrl":     {Unary: s.createUploadURL},
+		"attachments.delete":              {Unary: s.deleteAttachment},
 		"orchestration.getFullThreadDiff": {Unary: s.getFullThreadDiff},
 	}
 }

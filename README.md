@@ -18,11 +18,12 @@
 - **worktree 스레드**: 새 스레드를 시작할 때 입력창 아래의 Project folder 버튼이나 `Cmd-Alt-W`로 New worktree를 고르면, 서버가 현재 HEAD에서 임시 브랜치(`t3/…`)를 만들고 `~/.yatt/server/worktrees/<저장소>/` 아래에 git worktree를 만든 뒤 그 안에서 에이전트를 실행합니다. 열린 스레드는 입력창 아래에 브랜치를 표시합니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
 - **변경 내용 보기**: 헤더의 Changes 버튼이나 `Cmd-Shift-D`로 스레드가 바꾼 파일의 diff를 오른쪽 패널에 엽니다. 처음에는 모든 턴의 변경을 합쳐서 보여 주고, `Cmd-Alt-D`를 누르면 마지막 턴의 변경만 봅니다. 턴이 끝나면 자동으로 갱신됩니다.
+- **첨부 파일**: 입력창의 Attach 버튼이나 `Cmd-Shift-A`로 이미지나 파일을 고르면 서버로 바로 올라가고, 메시지를 보낼 때 함께 전달됩니다. 이미지는 에이전트에게 이미지로 전달되고, 다른 파일은 서버에 저장된 경로가 메시지에 붙습니다. 칩의 ✕를 누르면 올린 파일을 지웁니다.
 - 실행 중지, 스레드 보관
 - 승인 요청에 답하기 (승인, 이 세션 동안 승인, 거절)와 에이전트의 질문에 보기를 고르거나 입력창 내용으로 답하기
 - 단축키와 색상, 글꼴을 설정 파일로 변경 (재시작 없이 다시 불러오기 가능)
 
-아직 없는 것: 터미널, 첨부 파일, 시작한 스레드의 모델 변경, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
+아직 없는 것: 터미널, 시작한 스레드의 모델 변경, Markdown 렌더링, 메시지 텍스트 선택. 입력창은 한 줄입니다.
 
 ## 설치
 
@@ -88,6 +89,7 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | 프로젝트 추가 | `yatt::AddProject` | `cmd-shift-o` |
 | 새 스레드의 모델 바꾸기 | `yatt::CycleModel` | `cmd-shift-m` |
 | 새 스레드를 worktree / 프로젝트 폴더에서 시작 | `yatt::ToggleWorktree` | `cmd-alt-w` |
+| 파일 첨부 | `yatt::AttachFiles` | `cmd-shift-a` |
 | 스레드 이름 변경 | `yatt::RenameThread` | `f2`, `cmd-shift-r` |
 | 다음 / 이전 스레드 | `yatt::NextThread` / `yatt::PreviousThread` | `cmd-]` / `cmd-[`, `alt-down` / `alt-up` |
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
@@ -137,7 +139,7 @@ T3_SERVER_URL=http://127.0.0.1:3999 T3_TOKEN=x cargo run
 
 ## Go 서버
 
-`server/`의 `yatt-server`는 T3 Code 서버를 Go로 다시 구현한 것입니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 지금은 YATT가 쓰는 기능(프로젝트, 스레드, Codex와 Claude Code 실행, 대기열, 승인 요청, 제목 생성, 체크포인트, 턴 diff, worktree 스레드)을 구현했습니다.
+`server/`의 `yatt-server`는 T3 Code 서버를 Go로 다시 구현한 것입니다. 업스트림 계약에서 자동으로 뽑은 스펙(`spec/`)과, 업스트림 서버에서 기록한 적합성 시나리오(`conformance/`)를 기준으로 구현합니다. 계획과 단계는 [docs/go-port/PLAN.md](docs/go-port/PLAN.md), 현재 구현 범위는 [spec/coverage.md](spec/coverage.md)에 있습니다. 지금은 YATT가 쓰는 기능(프로젝트, 스레드, Codex와 Claude Code 실행, 대기열, 승인 요청, 제목 생성, 체크포인트, 턴 diff, worktree 스레드, 첨부 파일)을 구현했습니다.
 
 ## 라이선스와 출처
 

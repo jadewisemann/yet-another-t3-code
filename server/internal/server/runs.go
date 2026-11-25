@@ -164,8 +164,9 @@ type runState struct {
 	turnModel     string          // the model the provider turn reported (Claude)
 	turnUsage     map[string]any  // the finished turn's turnTokenUsage (Claude)
 	workspacePrep json.RawMessage // the launch's workspace strategy, for a deferred run
-	preparing     bool            // the run waits for its workspace and has no checkpoint scope yet
-	prepOrdinal   int             // the workspace preparation item's ordinal
+	attachments   []messageAttachment
+	preparing     bool // the run waits for its workspace and has no checkpoint scope yet
+	prepOrdinal   int  // the workspace preparation item's ordinal
 }
 
 type checkpointInfo struct {
@@ -434,6 +435,11 @@ func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMe
 		return nil, nil, err
 	}
 	tc := threadCommand{Type: "message.dispatch", CommandID: cmd.CommandID, ThreadID: cmd.ThreadID}
+	claimed, err := s.claimAttachments(cmd.ThreadID, cmd.Attachments)
+	if err != nil {
+		return nil, nil, dispatchError(tc, err.Error())
+	}
+	cmd.Attachments = claimed
 	var r *runState
 	titleRequest := ""
 	events, err := s.store.DecideMany(ctx, cmd.CommandID, func(st *store.State) ([]store.Draft, error) {
@@ -465,6 +471,7 @@ func (s *Server) dispatchMessageDeferred(ctx context.Context, payload json.RawMe
 		ordinal := len(t.Proj.List("runs")) + 1
 		var pt *store.Entity
 		r, pt = s.newRunState(st, t, ordinal, cmd.MessageID, cmd.Text, now, t.ModelSelection)
+		r.attachments = parseAttachments(cmd.Attachments)
 		if queued && pt == nil {
 			return nil, dispatchError(tc, "the active run has no provider thread to queue behind: "+cmd.ThreadID)
 		}
@@ -618,6 +625,7 @@ func (rn *runner) promoteQueued(ctx context.Context, threadID string) error {
 		modelSel, _ := json.Marshal(next.Field("modelSelection"))
 		r, _ = rn.srv.newRunState(st, t, int(next.Number("ordinal")), msg.ID, msg.String("text"), next.String("requestedAt"), modelSel)
 		attachments, _ := json.Marshal(msg.Field("attachments"))
+		r.attachments = parseAttachments(attachments)
 		now := store.Now()
 		// Upstream records the last turn's context usage after the queued
 		// run is promoted, so the promotion does not show it yet.
@@ -937,7 +945,7 @@ func (rn *runner) turnParams(r *runState) map[string]any {
 	}
 	return map[string]any{
 		"threadId": r.nativeThread, "cwd": r.cwd, "model": r.model,
-		"input": []any{map[string]any{"type": "text", "text": r.text}},
+		"input": rn.turnInput(r),
 		"approvalPolicy": map[string]any{"granular": map[string]any{
 			"mcp_elicitations": true, "request_permissions": false, "rules": false,
 			"sandbox_approval": false, "skill_approval": false,
@@ -945,6 +953,20 @@ func (rn *runner) turnParams(r *runState) map[string]any {
 		"approvalsReviewer": "user", "sandboxPolicy": sandbox, "summary": "auto",
 		"collaborationMode": map[string]any{"mode": collab, "settings": map[string]any{"model": r.model}},
 	}
+}
+
+// turnInput is the codex input for the run's message: the text with the
+// attachments' saved paths, then each image as a data URL.
+func (rn *runner) turnInput(r *runState) []any {
+	input := []any{map[string]any{"type": "text", "text": rn.srv.textWithAttachmentPaths(r.text, r.attachments)}}
+	images, err := rn.srv.agentImages(r.attachments)
+	if err != nil {
+		rn.srv.log.Warn("attachment images", slog.String("run", r.ids.run), slog.String("error", err.Error()))
+	}
+	for _, img := range images {
+		input = append(input, map[string]any{"type": "image", "url": "data:" + img.mime + ";base64," + img.data})
+	}
+	return input
 }
 
 // agentMessage is an assistant message item being streamed.

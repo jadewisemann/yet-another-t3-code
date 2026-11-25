@@ -49,6 +49,38 @@ enum DiffState {
     Failed(String),
 }
 
+/// A file picked for the next message, while and after it uploads.
+struct PendingAttachment {
+    key: u64,
+    path: std::path::PathBuf,
+    kind: &'static str,
+    name: String,
+    mime: &'static str,
+    size: u64,
+    /// The server's id, once it issued an upload URL.
+    attachment_id: Option<String>,
+    state: UploadState,
+}
+
+#[derive(Clone, PartialEq)]
+enum UploadState {
+    Uploading,
+    Ready,
+    Failed(String),
+}
+
+impl PendingAttachment {
+    fn message_value(&self) -> Option<serde_json::Value> {
+        let id = self.attachment_id.as_ref()?;
+        (self.state == UploadState::Ready).then(|| {
+            serde_json::json!({
+                "type": self.kind, "id": id, "name": self.name,
+                "mimeType": self.mime, "sizeBytes": self.size,
+            })
+        })
+    }
+}
+
 pub struct Workspace {
     focus_handle: FocusHandle,
     status: Status,
@@ -71,6 +103,10 @@ pub struct Workspace {
     turns: TurnLedger,
     /// Set while the diff panel is open.
     diff: Option<DiffView>,
+    /// Files picked for the next message.
+    attachments: Vec<PendingAttachment>,
+    /// The server's origin, for uploads.
+    server_url: Option<String>,
     next_query: u64,
     /// Options picked so far for questions, by request id then question id.
     picked_answers: HashMap<String, BTreeMap<String, String>>,
@@ -144,6 +180,8 @@ impl Workspace {
             requests: Vec::new(),
             turns: TurnLedger::default(),
             diff: None,
+            attachments: Vec::new(),
+            server_url: None,
             next_query: 0,
             picked_answers: HashMap::new(),
             composer,
@@ -172,6 +210,7 @@ impl Workspace {
     fn connect(&mut self, connection: Connection, window: &mut Window, cx: &mut Context<Self>) {
         let (tx, rx) = async_channel::unbounded();
         self.server_is_local = local::is_local(&connection);
+        self.server_url = Some(connection.server_url.trim_end_matches('/').to_string());
         self.rpc = Some(rpc::start(connection, tx));
         self.status = Status::Connecting;
         self._rpc_task = Some(cx.spawn_in(window, async move |this, cx| {
@@ -224,7 +263,13 @@ impl Workspace {
             RpcEvent::CommandFailed { label, error } => {
                 self.notice = Some(format!("{label} failed: {error}"));
             }
-            RpcEvent::QueryResult { key, result } => self.on_query_result(key, result),
+            RpcEvent::QueryResult { key, result } => {
+                if let Some(local) = key.strip_prefix("upload:") {
+                    self.on_upload_url(local, result, window, cx);
+                } else {
+                    self.on_query_result(key, result);
+                }
+            }
             RpcEvent::Launched { thread_id } => {
                 if let Some(thread_id) = thread_id {
                     self.select_thread(Some(thread_id), window, cx);
@@ -572,20 +617,40 @@ impl Workspace {
             return;
         }
         let Some(rpc) = self.rpc.clone() else { return };
+        if self
+            .attachments
+            .iter()
+            .any(|a| a.state == UploadState::Uploading)
+        {
+            self.notice = Some("Wait for the attachments to finish uploading.".into());
+            cx.notify();
+            return;
+        }
+        let attachments: Vec<_> = self
+            .attachments
+            .iter()
+            .filter_map(PendingAttachment::message_value)
+            .collect();
         if let Some(thread) = self.current_thread() {
             rpc.dispatch(
                 "Send",
-                protocol::send_message(&thread.id, &text, thread.is_working()),
+                protocol::send_message(&thread.id, &text, &attachments, thread.is_working()),
             );
         } else if let Some(project_id) = self.current_project_id() {
             let defaults = self.launch_defaults(&project_id);
-            rpc.launch_thread(protocol::launch_thread(&project_id, &defaults, &text));
+            rpc.launch_thread(protocol::launch_thread(
+                &project_id,
+                &defaults,
+                &text,
+                &attachments,
+            ));
         } else {
             self.notice = Some("Add a project first: choose its folder with Add project.".into());
             cx.notify();
             return;
         }
         self.composer.update(cx, |input, cx| input.set_text("", cx));
+        self.attachments.clear();
         self.notice = None;
         window.focus(&self.composer.focus_handle(cx));
         cx.notify();
@@ -699,6 +764,139 @@ impl Workspace {
     }
 
     /// Asks for a folder and adds it as a project, then starts a draft thread in it.
+    fn attach_files(&mut self, _: &AttachFiles, window: &mut Window, cx: &mut Context<Self>) {
+        if self.rpc.is_none() {
+            return;
+        }
+        let paths = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: true,
+            prompt: Some("Attach".into()),
+        });
+        cx.spawn_in(window, async move |this, cx| {
+            let Ok(Ok(Some(paths))) = paths.await else {
+                return;
+            };
+            this.update_in(cx, |this, _, cx| {
+                for path in paths {
+                    this.add_attachment(path);
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Asks the server for an upload URL for one file; the upload follows the answer.
+    fn add_attachment(&mut self, path: std::path::PathBuf) {
+        let Some(rpc) = self.rpc.clone() else { return };
+        let (kind, mime) = protocol::attachment_kind(&path);
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "attachment".into());
+        let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+        self.next_query += 1;
+        let key = self.next_query;
+        let state = if size == 0 {
+            UploadState::Failed("the file is empty".into())
+        } else if size > protocol::attachment_limit(kind) {
+            UploadState::Failed(format!(
+                "larger than {} MB",
+                protocol::attachment_limit(kind) >> 20
+            ))
+        } else {
+            rpc.query(
+                format!("upload:{key}"),
+                protocol::method::CREATE_UPLOAD_URL,
+                serde_json::json!({ "type": kind, "name": name, "mimeType": mime, "sizeBytes": size }),
+            );
+            UploadState::Uploading
+        };
+        self.attachments.push(PendingAttachment {
+            key,
+            path,
+            kind,
+            name,
+            mime,
+            size,
+            attachment_id: None,
+            state,
+        });
+    }
+
+    fn on_upload_url(
+        &mut self,
+        local: &str,
+        result: Result<serde_json::Value, String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(attachment) = self
+            .attachments
+            .iter_mut()
+            .find(|a| a.key.to_string() == local)
+        else {
+            return;
+        };
+        let value = match result {
+            Ok(value) => value,
+            Err(error) => {
+                attachment.state = UploadState::Failed(error);
+                return;
+            }
+        };
+        let id = value.get("attachmentId").and_then(|v| v.as_str());
+        let url = value.get("relativeUrl").and_then(|v| v.as_str());
+        let (Some(id), Some(url), Some(origin)) = (id, url, self.server_url.clone()) else {
+            attachment.state = UploadState::Failed("the server gave no upload URL".into());
+            return;
+        };
+        attachment.attachment_id = Some(id.to_string());
+        let key = attachment.key;
+        let path = attachment.path.clone();
+        let mime = attachment.mime;
+        let url = format!("{origin}{url}");
+        let task = cx.background_executor().spawn(async move {
+            let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+            ureq::post(&url)
+                .header("Content-Type", mime)
+                .send(&bytes[..])
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        });
+        cx.spawn_in(window, async move |this, cx| {
+            let result = task.await;
+            this.update(cx, |this, cx| {
+                if let Some(a) = this.attachments.iter_mut().find(|a| a.key == key) {
+                    a.state = match result {
+                        Ok(()) => UploadState::Ready,
+                        Err(error) => UploadState::Failed(error),
+                    };
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn remove_attachment(&mut self, key: u64, cx: &mut Context<Self>) {
+        if let Some(index) = self.attachments.iter().position(|a| a.key == key) {
+            let removed = self.attachments.remove(index);
+            if let (Some(id), Some(rpc)) = (removed.attachment_id, &self.rpc) {
+                rpc.query(
+                    "delete-attachment",
+                    protocol::method::DELETE_ATTACHMENT,
+                    serde_json::json!({ "attachmentId": id }),
+                );
+            }
+        }
+        cx.notify();
+    }
+
     fn add_project(&mut self, _: &AddProject, window: &mut Window, cx: &mut Context<Self>) {
         if self.rpc.is_none() {
             return;
@@ -1330,15 +1528,39 @@ impl Workspace {
                 message.text.clone()
             };
             let element = match message.role.as_str() {
-                "user" => div().flex().justify_end().child(
+                "user" => {
+                    let names: Vec<String> = message
+                        .attachments
+                        .iter()
+                        .filter_map(|a| a.get("name").and_then(|n| n.as_str()))
+                        .map(|n| format!("📎 {n}"))
+                        .collect();
                     div()
-                        .max_w(px(640.))
-                        .px_4()
-                        .py_2p5()
-                        .rounded_2xl()
-                        .bg(p.user_bubble)
-                        .child(body),
-                ),
+                        .flex()
+                        .flex_col()
+                        .items_end()
+                        .gap_1()
+                        .child(
+                            div()
+                                .max_w(px(640.))
+                                .px_4()
+                                .py_2p5()
+                                .rounded_2xl()
+                                .bg(p.user_bubble)
+                                .child(body),
+                        )
+                        .when(!names.is_empty(), |el| {
+                            el.child(
+                                div()
+                                    .flex()
+                                    .flex_wrap()
+                                    .gap_2()
+                                    .text_xs()
+                                    .text_color(p.muted)
+                                    .children(names),
+                            )
+                        })
+                }
                 "assistant" => div().child(
                     div()
                         .max_w(px(760.))
@@ -1516,6 +1738,56 @@ impl Workspace {
                     .into_any_element()
             }
         };
+        let attach_keys = window.keystroke_text_for(&AttachFiles);
+        let attach_label = if attach_keys.is_empty() {
+            "Attach".to_string()
+        } else {
+            format!("Attach · {attach_keys}")
+        };
+        let attach = dynamic_button("attach-files".into(), attach_label, p)
+            .text_xs()
+            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
+                this.attach_files(&AttachFiles, window, cx)
+            }));
+        let chips = div()
+            .flex()
+            .flex_wrap()
+            .gap_2()
+            .children(self.attachments.iter().map(|a| {
+                let key = a.key;
+                let (label, color) = match &a.state {
+                    UploadState::Uploading => (format!("{} · uploading…", a.name), p.muted),
+                    UploadState::Ready => (a.name.clone(), p.text),
+                    UploadState::Failed(error) => {
+                        (format!("{} · failed: {error}", a.name), p.danger)
+                    }
+                };
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px_2()
+                    .py_0p5()
+                    .rounded_md()
+                    .border_1()
+                    .border_color(p.border)
+                    .text_xs()
+                    .text_color(color)
+                    .child(label)
+                    .child(
+                        div()
+                            .id(SharedString::from(format!("attachment-remove-{key}")))
+                            .px_1()
+                            .rounded_sm()
+                            .cursor_pointer()
+                            .text_color(p.muted)
+                            .hover(|el| el.bg(p.row_hover))
+                            .child("✕")
+                            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                                this.remove_attachment(key, cx)
+                            })),
+                    )
+            }));
         div()
             .px_8()
             .pb_5()
@@ -1532,7 +1804,12 @@ impl Workspace {
                     .border_color(p.border)
                     .bg(p.surface)
                     .shadow_sm()
-                    .child(self.composer.clone()),
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .when(!self.attachments.is_empty(), |el| el.child(chips))
+                    .child(self.composer.clone())
+                    .child(div().flex().child(attach)),
             )
             .child(
                 div()
@@ -1767,6 +2044,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::add_project))
             .on_action(cx.listener(Self::cycle_model))
             .on_action(cx.listener(Self::toggle_worktree))
+            .on_action(cx.listener(Self::attach_files))
             .on_action(cx.listener(Self::rename_thread))
             .on_action(cx.listener(Self::next_thread))
             .on_action(cx.listener(Self::previous_thread))

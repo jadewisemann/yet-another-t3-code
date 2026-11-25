@@ -188,6 +188,14 @@ func (p *Process) SendUser(text, uuid string) error {
 	})
 }
 
+// SendUserContent sends a user message with content blocks.
+func (p *Process) SendUserContent(content []any, uuid string) error {
+	return p.Send(map[string]any{
+		"type": "user", "message": map[string]any{"role": "user", "content": content},
+		"parent_tool_use_id": nil, "uuid": uuid,
+	})
+}
+
 // Close ends the CLI: closing stdin asks it to exit; it is killed if it
 // has not exited soon after.
 func (p *Process) Close() {

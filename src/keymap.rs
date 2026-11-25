@@ -39,6 +39,8 @@ actions!(
         PreviousThread,
         /// Move focus to the message box.
         FocusComposer,
+        /// Choose files to attach to the next message.
+        AttachFiles,
         /// Show or hide the sidebar.
         ToggleSidebar,
         /// Show or hide the changes the open thread made.
@@ -76,6 +78,7 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
         ("Next thread", Box::new(NextThread)),
         ("Previous thread", Box::new(PreviousThread)),
         ("Focus message box", Box::new(FocusComposer)),
+        ("Attach files", Box::new(AttachFiles)),
         ("Toggle sidebar", Box::new(ToggleSidebar)),
         ("Show changes", Box::new(ToggleDiff)),
         ("Changes: all turns / last turn", Box::new(ToggleDiffScope)),
@@ -124,6 +127,7 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-]", NextThread, Some("Workspace")),
         KeyBinding::new("secondary-[", PreviousThread, Some("Workspace")),
         KeyBinding::new("secondary-l", FocusComposer, Some("Workspace")),
+        KeyBinding::new("secondary-shift-a", AttachFiles, Some("Workspace")),
         KeyBinding::new("secondary-b", ToggleSidebar, Some("Workspace")),
         KeyBinding::new("secondary-shift-d", ToggleDiff, Some("Workspace")),
         KeyBinding::new("secondary-alt-d", ToggleDiffScope, Some("Workspace")),

@@ -17,6 +17,8 @@ pub mod method {
     pub const SUBSCRIBE_THREAD: &str = "orchestration.subscribeThread";
     pub const PROJECTS_MUTATE: &str = "projects.mutate";
     pub const GET_TURN_DIFF: &str = "orchestration.getTurnDiff";
+    pub const CREATE_UPLOAD_URL: &str = "attachments.createUploadUrl";
+    pub const DELETE_ATTACHMENT: &str = "attachments.delete";
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -165,6 +167,8 @@ pub struct ConversationMessage {
     pub created_at: String,
     #[serde(default)]
     pub workflow_script: Option<bool>,
+    #[serde(default)]
+    pub attachments: Vec<Value>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -379,6 +383,38 @@ pub fn message_from_event(event: &Value) -> Option<ConversationMessage> {
     serde_json::from_value(event.get("payload")?.clone()).ok()
 }
 
+/// What kind of attachment a local file becomes, and its MIME type. Images the agents
+/// read as images go up as `image`; everything else as `file`.
+pub fn attachment_kind(path: &std::path::Path) -> (&'static str, &'static str) {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .unwrap_or_default();
+    match ext.as_str() {
+        "png" => ("image", "image/png"),
+        "jpg" | "jpeg" => ("image", "image/jpeg"),
+        "gif" => ("image", "image/gif"),
+        "webp" => ("image", "image/webp"),
+        "pdf" => ("file", "application/pdf"),
+        "svg" => ("file", "image/svg+xml"),
+        "json" => ("file", "application/json"),
+        "md" | "markdown" => ("file", "text/markdown"),
+        "csv" => ("file", "text/csv"),
+        "html" | "htm" => ("file", "text/html"),
+        "txt" | "log" | "rs" | "go" | "py" | "js" | "ts" | "tsx" | "jsx" | "toml" | "yaml"
+        | "yml" | "sh" | "c" | "h" | "cpp" | "java" | "rb" | "swift" | "kt" | "css" | "sql" => {
+            ("file", "text/plain")
+        }
+        _ => ("file", "application/octet-stream"),
+    }
+}
+
+/// The largest upload the server takes for each kind.
+pub fn attachment_limit(kind: &str) -> u64 {
+    if kind == "image" { 10 << 20 } else { 25 << 20 }
+}
+
 pub fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -434,7 +470,12 @@ pub fn rename_thread(thread_id: &str, title: &str) -> Value {
     })
 }
 
-pub fn send_message(thread_id: &str, text: &str, thread_is_working: bool) -> Value {
+pub fn send_message(
+    thread_id: &str,
+    text: &str,
+    attachments: &[Value],
+    thread_is_working: bool,
+) -> Value {
     let command_id = new_id();
     // Same choice as the web composer: a message sent while a run is going waits for it.
     let dispatch_mode = if thread_is_working {
@@ -450,7 +491,7 @@ pub fn send_message(thread_id: &str, text: &str, thread_is_working: bool) -> Val
         "threadId": thread_id,
         "messageId": command_id,
         "text": text,
-        "attachments": [],
+        "attachments": attachments,
         "dispatchMode": dispatch_mode,
     })
 }
@@ -577,7 +618,12 @@ pub struct LaunchDefaults {
     pub new_worktree: bool,
 }
 
-pub fn launch_thread(project_id: &str, defaults: &LaunchDefaults, first_message: &str) -> Value {
+pub fn launch_thread(
+    project_id: &str,
+    defaults: &LaunchDefaults,
+    first_message: &str,
+    attachments: &[Value],
+) -> Value {
     let title: String = first_message.chars().take(60).collect();
     let title = if title.trim().is_empty() {
         "New thread".to_string()
@@ -601,7 +647,7 @@ pub fn launch_thread(project_id: &str, defaults: &LaunchDefaults, first_message:
         "initialMessage": {
             "messageId": new_id(),
             "text": first_message,
-            "attachments": [],
+            "attachments": attachments,
         },
     })
 }
@@ -626,6 +672,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn classifies_attachments() {
+        use std::path::Path;
+        assert_eq!(
+            attachment_kind(Path::new("a/shot.PNG")),
+            ("image", "image/png")
+        );
+        assert_eq!(
+            attachment_kind(Path::new("notes.txt")),
+            ("file", "text/plain")
+        );
+        assert_eq!(
+            attachment_kind(Path::new("blob")),
+            ("file", "application/octet-stream")
+        );
+        let message = send_message("t", "hi", &[json!({"id": "a"})], false);
+        assert_eq!(message["attachments"], json!([{"id": "a"}]));
+    }
+
+    #[test]
     fn launches_in_a_worktree() {
         let mut defaults = LaunchDefaults {
             model_selection: json!({"instanceId": "codex", "model": "m"}),
@@ -634,12 +699,12 @@ mod tests {
             new_worktree: false,
         };
         assert_eq!(
-            launch_thread("p", &defaults, "hi")["workspaceStrategy"],
+            launch_thread("p", &defaults, "hi", &[])["workspaceStrategy"],
             json!({"type": "root"})
         );
         defaults.new_worktree = true;
         assert_eq!(
-            launch_thread("p", &defaults, "hi")["workspaceStrategy"],
+            launch_thread("p", &defaults, "hi", &[])["workspaceStrategy"],
             json!({"type": "worktree", "baseRef": "HEAD"})
         );
     }
