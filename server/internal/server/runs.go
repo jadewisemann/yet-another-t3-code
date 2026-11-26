@@ -165,8 +165,9 @@ type runState struct {
 	turnUsage     map[string]any  // the finished turn's turnTokenUsage (Claude)
 	workspacePrep json.RawMessage // the launch's workspace strategy, for a deferred run
 	attachments   []messageAttachment
-	preparing     bool // the run waits for its workspace and has no checkpoint scope yet
-	prepOrdinal   int  // the workspace preparation item's ordinal
+	preparing     bool               // the run waits for its workspace and has no checkpoint scope yet
+	prepOrdinal   int                // the workspace preparation item's ordinal
+	wtStart       *worktreeTurnStart // the session worktrees before the turn
 }
 
 type checkpointInfo struct {
@@ -901,6 +902,7 @@ func (rn *runner) run(r *runState) error {
 		r.parent = r.ids.checkpoint(0)
 		r.nextCkpt = 1
 	}
+	r.srv.beginWorktreeTurn(r)
 	if _, err := c.Call(ctx, "config/read", map[string]any{"cwd": r.cwd, "includeLayers": false}); err != nil {
 		return err
 	}
@@ -1036,6 +1038,7 @@ func (rn *runner) finish(ctx context.Context, r *runState, turnStatus string) er
 	} else if ordinal > 0 {
 		files = checkpointFiles(r.cwd, checkpointRef(r.ids.scope, ordinal-1), ref)
 	}
+	r.srv.endWorktreeTurn(r)
 	at := store.Now()
 	if interrupted {
 		// The run keeps the time it was interrupted.

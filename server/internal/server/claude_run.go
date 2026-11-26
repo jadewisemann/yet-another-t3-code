@@ -311,6 +311,7 @@ func (rn *runner) runClaude(r *runState) error {
 		r.parent = r.ids.checkpoint(0)
 		r.nextCkpt = 1
 	}
+	r.srv.beginWorktreeTurn(r)
 	nativeTurn := "turn:" + r.ids.attempt
 	r.mu.Lock()
 	r.turnID = nativeTurn

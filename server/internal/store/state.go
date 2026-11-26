@@ -13,6 +13,13 @@ const (
 	ThreadVisited         = "thread.visited"
 	ThreadArchived        = "thread.archived"
 	ThreadUnarchived      = "thread.unarchived"
+	// Settling is upstream's thread.settle / thread.unsettle, set only by the
+	// user: yatt-server never settles a thread on its own.
+	ThreadSettled   = "thread.settled"
+	ThreadUnsettled = "thread.unsettled"
+	// ThreadSectionSet files a thread under a sidebar section (a YATT
+	// extension; upstream has no sections).
+	ThreadSectionSet = "thread.section-set"
 )
 
 type Project struct {
@@ -43,6 +50,12 @@ type Thread struct {
 	ArchivedAt      *string         `json:"archivedAt,omitempty"`
 	LastVisitedAt   *string         `json:"lastVisitedAt,omitempty"`
 
+	// Not part of the thread.created data: set by thread.settled,
+	// thread.unsettled and thread.section-set.
+	SettledAt   *string `json:"-"`
+	UnsettledAt *string `json:"-"`
+	Section     *string `json:"-"`
+
 	// Not part of the thread.created data: derived from later events.
 	ActiveProviderThreadID *string `json:"-"`
 	// TitleRenamed is set once a title is chosen: true for a user rename,
@@ -72,6 +85,12 @@ type ThreadMetadata struct {
 type TitleRegeneration struct {
 	RequestID string `json:"requestId"`
 	StartedAt string `json:"startedAt"`
+}
+
+type ThreadSection struct {
+	ThreadID string  `json:"threadId"`
+	Section  *string `json:"section,omitempty"`
+	At       string  `json:"at"`
 }
 
 type ThreadRef struct {
@@ -177,7 +196,18 @@ func (s *State) apply(e Event) error {
 			t.TitleRegeneration = nil
 		}
 		t.UpdatedAt = m.At
-	case ThreadVisited, ThreadArchived, ThreadUnarchived:
+	case ThreadSectionSet:
+		var m ThreadSection
+		if err := json.Unmarshal(e.Data, &m); err != nil {
+			return err
+		}
+		t, err := s.thread(m.ThreadID)
+		if err != nil {
+			return err
+		}
+		// Filing a thread does not count as activity: it keeps its place.
+		t.Section = m.Section
+	case ThreadVisited, ThreadArchived, ThreadUnarchived, ThreadSettled, ThreadUnsettled:
 		var r ThreadRef
 		if err := json.Unmarshal(e.Data, &r); err != nil {
 			return err
@@ -196,6 +226,12 @@ func (s *State) apply(e Event) error {
 		case ThreadUnarchived:
 			t.ArchivedAt = nil
 			t.UpdatedAt = at
+		case ThreadSettled:
+			t.SettledAt = &at
+			t.UnsettledAt = nil
+		case ThreadUnsettled:
+			t.SettledAt = nil
+			t.UnsettledAt = &at
 		}
 	default:
 		return fmt.Errorf("unknown event type %q", e.Type)

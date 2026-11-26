@@ -51,6 +51,9 @@ type Server struct {
 
 	terminals         *terminalManager
 	terminalManagerID string
+
+	// worktreeMu guards the session worktree notes (session_worktrees.go).
+	worktreeMu sync.Mutex
 }
 
 // Handler answers one RPC method. Unary handlers return a value or an error;

@@ -20,3 +20,4 @@
 | `worktrees.md` | P3 |
 | `attachments.md` | P3 |
 | `terminals.md` | P3 |
+| `yatt-extensions.md` | YATT 전용 (업스트림에 없음) |

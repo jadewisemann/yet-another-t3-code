@@ -30,6 +30,7 @@ func (s *Server) registerHandlers() map[string]Handler {
 		"attachments.createUploadUrl":     {Unary: s.createUploadURL},
 		"attachments.delete":              {Unary: s.deleteAttachment},
 		"orchestration.getFullThreadDiff": {Unary: s.getFullThreadDiff},
+		"yatt.getThreadPullRequests":      {Unary: s.getThreadPullRequests},
 		"terminal.open":                   {Unary: s.terminalOpen},
 		"terminal.write":                  {Unary: s.terminalWrite},
 		"terminal.resize":                 {Unary: s.terminalResize},
@@ -118,6 +119,8 @@ type threadCommand struct {
 	Branch          *string         `json:"branch"`
 	WorktreePath    *string         `json:"worktreePath"`
 	VisitedAt       string          `json:"visitedAt"`
+	SettledAt       *string         `json:"settledAt"`
+	Section         *string         `json:"section"`
 }
 
 func dispatchError(cmd threadCommand, msg string) error {
@@ -217,6 +220,30 @@ func (s *Server) dispatchCommand(ctx context.Context, payload json.RawMessage) (
 				return "", nil, dispatchError(cmd, "Thread is not archived: "+cmd.ThreadID)
 			}
 			return store.ThreadUnarchived, store.ThreadRef{ThreadID: cmd.ThreadID, At: now}, nil
+		case "thread.settle", "thread.unsettle":
+			// Only the user settles a thread; there is no auto-settle.
+			if _, err := needThread(st); err != nil {
+				return "", nil, err
+			}
+			if cmd.Type == "thread.unsettle" {
+				return store.ThreadUnsettled, store.ThreadRef{ThreadID: cmd.ThreadID, At: now}, nil
+			}
+			at := now
+			if cmd.SettledAt != nil && *cmd.SettledAt != "" {
+				at = *cmd.SettledAt
+			}
+			return store.ThreadSettled, store.ThreadRef{ThreadID: cmd.ThreadID, At: at}, nil
+		case "thread.section.set":
+			if _, err := needThread(st); err != nil {
+				return "", nil, err
+			}
+			var section *string
+			if cmd.Section != nil {
+				if name := strings.TrimSpace(*cmd.Section); name != "" {
+					section = &name
+				}
+			}
+			return store.ThreadSectionSet, store.ThreadSection{ThreadID: cmd.ThreadID, Section: section, At: now}, nil
 		default:
 			return "", nil, fmt.Errorf("yatt-server does not implement command %q yet", cmd.Type)
 		}
@@ -325,7 +352,8 @@ func shellValues(st *store.State, e store.Event, resolved map[string]bool) []any
 	case store.ProjectCreated:
 		p := st.Projects[ref.ID]
 		return []any{map[string]any{"kind": "project.updated", "sequence": e.Sequence, "project": renderShellProject(p)}}
-	case store.ThreadCreated, store.ThreadMetadataUpdated, store.ThreadUnarchived:
+	case store.ThreadCreated, store.ThreadMetadataUpdated, store.ThreadUnarchived,
+		store.ThreadSettled, store.ThreadUnsettled, store.ThreadSectionSet:
 		t := st.Threads[threadID]
 		var out []any
 		if e.Type == store.ThreadCreated {

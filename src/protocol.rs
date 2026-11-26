@@ -24,6 +24,8 @@ pub mod method {
     pub const TERMINAL_RESIZE: &str = "terminal.resize";
     pub const TERMINAL_CLEAR: &str = "terminal.clear";
     pub const TERMINAL_OPEN: &str = "terminal.open";
+    /// A yatt-server extension: the pull requests of a thread's branches.
+    pub const GET_THREAD_PULL_REQUESTS: &str = "yatt.getThreadPullRequests";
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -95,9 +97,19 @@ pub struct ThreadShell {
     pub branch: Option<String>,
     #[serde(default)]
     pub worktree_path: Option<String>,
+    /// Set when the user settled the thread (`thread.settle`).
+    #[serde(default)]
+    pub settled_at: Option<String>,
+    /// The sidebar section the user filed the thread under (a yatt-server extension).
+    #[serde(default)]
+    pub section: Option<String>,
 }
 
 impl ThreadShell {
+    pub fn is_settled(&self) -> bool {
+        self.settled_at.is_some()
+    }
+
     pub fn is_listed(&self) -> bool {
         self.lineage.is_listed() && self.archived_at.is_none() && self.deleted_at.is_none()
     }
@@ -260,6 +272,8 @@ impl TurnLedger {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DiffLineKind {
+    /// Starts the changes of one folder: the thread's own, or a worktree the agent made.
+    Workspace,
     /// `diff --git a/x b/x`: starts a file.
     File,
     /// `index`, `new file mode`, `---`, `+++` and the like.
@@ -293,6 +307,143 @@ pub fn diff_lines(diff: &str) -> Vec<(DiffLineKind, String)> {
             (kind, line.to_string())
         })
         .collect()
+}
+
+/// The lines the changes panel shows for a `getTurnDiff` answer: the thread folder's patch,
+/// then the patch of each worktree the agent made (`worktrees`, a yatt-server extension),
+/// each under a heading line. Empty when nothing changed.
+pub fn turn_diff_lines(answer: &Value) -> Vec<(DiffLineKind, String)> {
+    let main = answer.get("diff").and_then(Value::as_str).unwrap_or("");
+    let worktrees: Vec<&Value> = answer
+        .get("worktrees")
+        .and_then(Value::as_array)
+        .map(|w| w.iter().collect())
+        .unwrap_or_default();
+    if worktrees.is_empty() {
+        return diff_lines(main);
+    }
+    let mut lines = Vec::new();
+    if !main.is_empty() {
+        lines.push((DiffLineKind::Workspace, "Thread folder".to_string()));
+        lines.extend(diff_lines(main));
+    }
+    for worktree in worktrees {
+        let diff = worktree.get("diff").and_then(Value::as_str).unwrap_or("");
+        if diff.is_empty() {
+            continue;
+        }
+        let path = worktree.get("path").and_then(Value::as_str).unwrap_or("");
+        let heading = match worktree.get("branch").and_then(Value::as_str) {
+            Some(branch) if !branch.is_empty() => format!("Worktree {branch} · {path}"),
+            _ => format!("Worktree {path}"),
+        };
+        lines.push((DiffLineKind::Workspace, heading));
+        lines.extend(diff_lines(diff));
+    }
+    lines
+}
+
+/// A pull request whose head is one of the thread's branches.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PullRequest {
+    pub number: u64,
+    #[serde(default)]
+    pub title: String,
+    pub url: String,
+    /// `OPEN`, `CLOSED` or `MERGED`.
+    #[serde(default)]
+    pub state: String,
+    #[serde(default)]
+    pub is_draft: bool,
+}
+
+impl PullRequest {
+    pub fn label(&self) -> String {
+        let state = match (self.state.as_str(), self.is_draft) {
+            ("OPEN", true) => "draft",
+            ("OPEN", false) => "open",
+            ("MERGED", _) => "merged",
+            ("CLOSED", _) => "closed",
+            (other, _) => other,
+        };
+        format!("PR #{} {state}", self.number)
+    }
+}
+
+/// Reads a `yatt.getThreadPullRequests` answer: the pull requests and, when none could be
+/// listed, why.
+pub fn pull_requests_from(answer: &Value) -> (Vec<PullRequest>, Option<String>) {
+    let prs = answer
+        .get("pullRequests")
+        .and_then(|v| serde_json::from_value(v.clone()).ok())
+        .unwrap_or_default();
+    let error = answer
+        .get("error")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    (prs, error)
+}
+
+/// A group of threads in the sidebar.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SectionKey {
+    /// Threads the user did not file anywhere; listed first, without a heading.
+    Unsorted,
+    Named(String),
+    /// Threads the user settled, whatever their section; listed last.
+    Settled,
+}
+
+impl SectionKey {
+    pub fn id(&self) -> String {
+        match self {
+            SectionKey::Unsorted => "unsorted".into(),
+            SectionKey::Named(name) => format!("section:{name}"),
+            SectionKey::Settled => "settled".into(),
+        }
+    }
+}
+
+/// Splits one project's threads (already in display order) into sidebar sections: unsorted
+/// first, then named sections by name, then settled.
+pub fn sections_of(threads: Vec<&ThreadShell>) -> Vec<(SectionKey, Vec<&ThreadShell>)> {
+    let mut sections: Vec<(SectionKey, Vec<&ThreadShell>)> = Vec::new();
+    for thread in threads {
+        let key = if thread.is_settled() {
+            SectionKey::Settled
+        } else {
+            match thread.section.as_deref().map(str::trim) {
+                Some(name) if !name.is_empty() => SectionKey::Named(name.to_string()),
+                _ => SectionKey::Unsorted,
+            }
+        };
+        match sections.iter_mut().find(|(k, _)| *k == key) {
+            Some((_, list)) => list.push(thread),
+            None => sections.push((key, vec![thread])),
+        }
+    }
+    sections.sort_by(|(a, _), (b, _)| match (a, b) {
+        (SectionKey::Named(a), SectionKey::Named(b)) => a
+            .to_lowercase()
+            .cmp(&b.to_lowercase())
+            .then_with(|| a.cmp(b)),
+        _ => a.cmp(b),
+    });
+    sections
+}
+
+/// The section names in use among `threads`, sorted, for completing a section name.
+pub fn section_names<'a>(threads: impl IntoIterator<Item = &'a ThreadShell>) -> Vec<String> {
+    let mut names: Vec<String> = threads
+        .into_iter()
+        .filter_map(|t| t.section.as_deref().map(str::trim))
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .collect();
+    names.sort_by_key(|n| n.to_lowercase());
+    names.dedup_by(|a, b| a.to_lowercase() == b.to_lowercase());
+    names
 }
 
 /// The path a `diff --git a/<path> b/<path>` line names.
@@ -537,6 +688,33 @@ pub fn stop_thread(thread_id: &str) -> Value {
     })
 }
 
+pub fn settle_thread(thread_id: &str) -> Value {
+    json!({
+        "type": "thread.settle",
+        "commandId": new_id(),
+        "threadId": thread_id,
+        "settledAt": iso_now(),
+    })
+}
+
+pub fn unsettle_thread(thread_id: &str) -> Value {
+    json!({
+        "type": "thread.unsettle",
+        "commandId": new_id(),
+        "threadId": thread_id,
+    })
+}
+
+/// Files the thread under a sidebar section; `None` takes it out of its section.
+pub fn set_thread_section(thread_id: &str, section: Option<&str>) -> Value {
+    json!({
+        "type": "thread.section.set",
+        "commandId": new_id(),
+        "threadId": thread_id,
+        "section": section,
+    })
+}
+
 pub fn archive_thread(thread_id: &str) -> Value {
     json!({
         "type": "thread.archive",
@@ -657,6 +835,68 @@ pub fn launch_thread(
             "attachments": attachments,
         },
     })
+}
+
+#[cfg(test)]
+mod section_tests {
+    use super::*;
+
+    fn thread(id: &str, section: Option<&str>, settled: bool) -> ThreadShell {
+        serde_json::from_value(json!({
+            "id": id, "projectId": "p", "section": section,
+            "settledAt": if settled { json!("2026-01-01T00:00:00.000Z") } else { Value::Null },
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn groups_threads_into_sections() {
+        let threads = [
+            thread("a", Some("Reviews"), false),
+            thread("b", None, false),
+            thread("c", Some("bugs"), true),
+            thread("d", Some("bugs"), false),
+            thread("e", Some(" "), false),
+        ];
+        let sections = sections_of(threads.iter().collect());
+        let keys: Vec<(SectionKey, Vec<&str>)> = sections
+            .iter()
+            .map(|(k, list)| (k.clone(), list.iter().map(|t| t.id.as_str()).collect()))
+            .collect();
+        assert_eq!(
+            keys,
+            vec![
+                (SectionKey::Unsorted, vec!["b", "e"]),
+                (SectionKey::Named("bugs".into()), vec!["d"]),
+                (SectionKey::Named("Reviews".into()), vec!["a"]),
+                (SectionKey::Settled, vec!["c"]),
+            ]
+        );
+        assert_eq!(section_names(threads.iter()), vec!["bugs", "Reviews"]);
+    }
+
+    #[test]
+    fn reads_worktree_diffs_and_pull_requests() {
+        let answer = json!({
+            "diff": "diff --git a/x b/x\n+one\n",
+            "worktrees": [{"path": "/w", "branch": "fix", "diff": "diff --git a/y b/y\n@@ -1 +0,0 @@\n-two\n"}],
+        });
+        let lines = turn_diff_lines(&answer);
+        assert_eq!(lines[0], (DiffLineKind::Workspace, "Thread folder".into()));
+        assert_eq!(
+            lines[3],
+            (DiffLineKind::Workspace, "Worktree fix · /w".into())
+        );
+        assert_eq!(lines[5], (DiffLineKind::Hunk, "@@ -1 +0,0 @@".into()));
+        assert_eq!(lines[6], (DiffLineKind::Removed, "-two".into()));
+        assert_eq!(turn_diff_lines(&json!({"diff": "+a"})).len(), 1);
+
+        let (prs, error) = pull_requests_from(&json!({"pullRequests": [
+            {"number": 7, "title": "Fix", "url": "https://x/7", "state": "OPEN", "isDraft": true}
+        ]}));
+        assert_eq!(prs[0].label(), "PR #7 draft");
+        assert_eq!(error, None);
+    }
 }
 
 #[cfg(test)]
