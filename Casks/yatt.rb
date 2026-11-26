@@ -1,6 +1,6 @@
 cask "yatt" do
-  version "0.5.0"
-  sha256 "9d1decf28279c0c9d27f26596eed4a9b387353bb11dd205c763e9b69ab1c7bc9"
+  version "0.6.0"
+  sha256 "28cb3c8286d06a170fa368e33d5936fbbfcf3e412b5415e380e05c5fe9591920"
 
   url "https://github.com/jadewisemann/yet-another-t3-code/releases/download/v#{version}/YATT-macos-arm64.zip"
   name "YATT"
