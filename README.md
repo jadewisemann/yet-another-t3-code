@@ -12,12 +12,15 @@
 
 - 프로젝트 추가 (사이드바의 Add 버튼이나 `Cmd-Shift-O`로 폴더 선택)
 - 프로젝트별 스레드 목록 (진행 중인 스레드와 답변을 기다리는 스레드는 점으로 표시)
+- **섹션**: `Cmd-Shift-S`로 열린 스레드를 섹션에 넣습니다. 헤더에 이름을 입력하는 칸이 열리고, Tab을 누르면 이미 있는 섹션 이름이 차례로 채워지며, 비운 채 Enter를 누르면 섹션에서 뺍니다. 섹션이 없는 스레드가 맨 위에, 그 아래로 섹션이 이름순으로 표시됩니다. 섹션 제목을 누르거나 `Cmd-Alt-S`(열린 스레드의 섹션)를 누르면 접고 펼 수 있고, 접힌 상태는 설정 폴더의 `sidebar.json`에 남습니다.
+- **정리(settle)**: `Cmd-E`로 열린 스레드를 settle하면 맨 아래 Settled 섹션으로 옮겨지고, 다시 누르면 원래 섹션으로 돌아옵니다. 자동 settle은 없어서 사용자가 settle한 스레드만 옮겨지며, settle한 스레드에 메시지를 보내면 다시 원래 섹션으로 돌아옵니다. Settled 섹션은 처음에 접혀 있고 `Cmd-Shift-E`로 펼칩니다.
 - 대화 보기와 실시간 스트리밍, 메시지 보내기 (실행 중이면 대기열에 추가)
 - 새 스레드 시작 (같은 프로젝트에서 최근에 쓴 모델과 실행 모드를 재사용하고, 처음에는 Codex 기본 모델을 사용). 제목은 첫 메시지를 보고 Codex가 지어 줍니다.
 - **모델 선택**: 새 스레드를 시작할 때 입력창 아래의 모델 버튼이나 `Cmd-Shift-M`으로 Codex 모델(GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna)과 Claude 모델(Opus 5.5, Sonnet 5.5, Fable 5.2, Haiku 5.5)을 차례로 바꿉니다. 이미 시작한 스레드는 처음 고른 모델을 계속 씁니다.
 - **worktree 스레드**: 새 스레드를 시작할 때 입력창 아래의 Project folder 버튼이나 `Cmd-Alt-W`로 New worktree를 고르면, 서버가 현재 HEAD에서 임시 브랜치(`t3/…`)를 만들고 `~/.yatt/server/worktrees/<저장소>/` 아래에 git worktree를 만든 뒤 그 안에서 에이전트를 실행합니다. 열린 스레드는 입력창 아래에 브랜치를 표시합니다.
 - **스레드 이름 변경**: `F2`, 헤더의 Rename 버튼, 제목이나 목록 항목 더블클릭
-- **변경 내용 보기**: 헤더의 Changes 버튼이나 `Cmd-Shift-D`로 스레드가 바꾼 파일의 diff를 오른쪽 패널에 엽니다. 처음에는 모든 턴의 변경을 합쳐서 보여 주고, `Cmd-Alt-D`를 누르면 마지막 턴의 변경만 봅니다. 턴이 끝나면 자동으로 갱신됩니다.
+- **변경 내용 보기**: 헤더의 Changes 버튼이나 `Cmd-Shift-D`로 스레드가 바꾼 파일의 diff를 오른쪽 패널에 엽니다. 처음에는 방금 끝난 턴(이번 턴)의 변경을 보여 주고, `Cmd-Alt-D`를 누르면 모든 턴의 변경을 합쳐서 봅니다. 에이전트가 턴 도중에 스스로 만든 git worktree(`git worktree add`, Claude Code의 worktree 등)의 변경도 "Worktree <브랜치>" 제목 아래에 함께 표시됩니다. 턴이 끝나면 자동으로 갱신됩니다.
+- **PR 보기**: 스레드 폴더나 에이전트가 만든 worktree의 브랜치에 PR이 있으면 헤더에 `PR #번호 open` 같은 버튼이 나오고, 변경 패널 위쪽에 PR 목록이 나옵니다. `Cmd-Alt-P`로 첫 PR을 브라우저에서 엽니다. PR은 GitHub CLI(`gh`)로 찾으므로 `gh auth login`이 되어 있어야 하며, 턴이 끝날 때마다 다시 확인합니다.
 - **첨부 파일**: 입력창의 Attach 버튼이나 `Cmd-Shift-A`로 이미지나 파일을 고르면 서버로 바로 올라가고, 메시지를 보낼 때 함께 전달됩니다. 이미지는 에이전트에게 이미지로 전달되고, 다른 파일은 서버에 저장된 경로가 메시지에 붙습니다. 칩의 ✕를 누르면 올린 파일을 지웁니다.
 - **터미널**: `Cmd-J`(또는 `` Ctrl-` ``)로 열린 스레드의 터미널을 아래쪽에 엽니다. 셸은 서버가 스레드의 worktree나 프로젝트 폴더에서 실행하므로, 패널을 닫거나 다른 스레드로 옮겨도 계속 실행되고 다시 열면 이전 출력이 보입니다. `Cmd-K`는 화면을 비우고, 셸이 끝나면 Enter로 새 셸을 시작합니다.
 - 실행 중지, 스레드 보관
@@ -98,9 +101,14 @@ Zed와 같은 형식입니다. 기본값 위에 덧붙이며, `null`로 지정�
 | 입력창으로 이동 | `yatt::FocusComposer` | `cmd-l` |
 | 사이드바 표시 전환 | `yatt::ToggleSidebar` | `cmd-b` |
 | 변경 내용 패널 열기 / 닫기 | `yatt::ToggleDiff` | `cmd-shift-d` |
-| 변경 내용: 모든 턴 / 마지막 턴 | `yatt::ToggleDiffScope` | `cmd-alt-d` |
+| 변경 내용: 이번 턴 / 모든 턴 | `yatt::ToggleDiffScope` | `cmd-alt-d` |
 | 실행 중지 | `yatt::StopThread` | `cmd-.` |
 | 스레드 보관 | `yatt::ArchiveThread` | `cmd-shift-backspace` |
+| 스레드 settle / 되돌리기 | `yatt::ToggleSettled` | `cmd-e` |
+| 스레드를 섹션으로 옮기기 | `yatt::MoveToSection` | `cmd-shift-s` |
+| 열린 스레드의 섹션 접기 / 펴기 | `yatt::ToggleSection` | `cmd-alt-s` |
+| Settled 섹션 보이기 / 숨기기 | `yatt::ToggleSettledSection` | `cmd-shift-e` |
+| 스레드의 PR 열기 | `yatt::OpenPullRequest` | `cmd-alt-p` |
 | 단축키 목록 | `yatt::ToggleShortcuts` | `cmd-/` |
 | 설정 다시 불러오기 | `yatt::ReloadConfig` | `cmd-shift-,` |
 | 설정 폴더 열기 | `yatt::OpenConfigFolder` | `cmd-,` |

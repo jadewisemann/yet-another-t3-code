@@ -90,6 +90,18 @@ func titleRegeneration(t *store.Thread) any {
 	return map[string]any{"requestId": t.TitleRegeneration.RequestID, "startedAt": t.TitleRegeneration.StartedAt}
 }
 
+// settledOverride is how upstream marks a settle the user chose: "settled"
+// after thread.settle, "active" after thread.unsettle, else null.
+func settledOverride(t *store.Thread) any {
+	switch {
+	case t.SettledAt != nil:
+		return "settled"
+	case t.UnsettledAt != nil:
+		return "active"
+	}
+	return nil
+}
+
 func threadRecord(t *store.Thread) map[string]any {
 	return map[string]any{
 		"id":                     t.ID,
@@ -114,8 +126,8 @@ func threadRecord(t *store.Thread) map[string]any {
 			"parentThreadId": nil, "relationshipToParent": nil, "rootThreadId": t.ID,
 		},
 		"pullRequests":    []any{},
-		"settledAt":       nil,
-		"settledOverride": nil,
+		"settledAt":       ptr(t.SettledAt),
+		"settledOverride": settledOverride(t),
 		"snoozedAt":       nil,
 		"snoozedUntil":    nil,
 	}
@@ -135,12 +147,16 @@ func renderShellThread(t *store.Thread) map[string]any {
 		"limitRecovery": nil, "opens": nil, "pendingBackgroundTasks": []any{},
 		"pendingGuestMessageCount": 0, "pendingRuntimeRequest": nil, "pinOrderKey": nil,
 		"pinnedAt": nil, "providerInstanceHistory": []any{}, "status": "idle",
-		"titleRegeneration": nil, "unsettledAt": nil, "usageLimitResetAt": nil, "visibleItemCount": 0,
+		"titleRegeneration": nil, "unsettledAt": ptr(t.UnsettledAt), "usageLimitResetAt": nil, "visibleItemCount": 0,
 	} {
 		m[k] = v
 	}
 	delete(m, "titleRenamed")
 	m["titleRegeneration"] = titleRegeneration(t)
+	// The section is a YATT extension, sent only for a thread that has one.
+	if t.Section != nil {
+		m["section"] = *t.Section
+	}
 	summarizeRuns(t, m)
 	return m
 }
@@ -294,6 +310,9 @@ func renderThreadEvent(st *store.State, e store.Event) any {
 		store.ThreadVisited:         "thread.visited",
 		store.ThreadArchived:        "thread.archived",
 		store.ThreadUnarchived:      "thread.unarchived",
+		store.ThreadSettled:         "thread.settled",
+		store.ThreadUnsettled:       "thread.unsettled",
+		store.ThreadSectionSet:      "thread.section-set",
 	}
 	typ, ok := types[e.Type]
 	if !ok {

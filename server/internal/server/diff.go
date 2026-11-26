@@ -177,7 +177,12 @@ func (s *Server) turnDiff(req turnDiffRequest, operation string) (map[string]any
 	if err != nil {
 		return nil, err
 	}
-	return turnDiffResult(req, diff), nil
+	out := turnDiffResult(req, diff)
+	// Worktrees the agent made (a YATT extension): sent only when there are any.
+	if wts := s.sessionWorktreeDiffs(req.ThreadID, cwd, req.FromTurnCount, req.ToTurnCount, ignoreWhitespace); len(wts) > 0 {
+		out["worktrees"] = wts
+	}
+	return out, nil
 }
 
 // checkpointPatch is the patch between two checkpoint refs, limited to the

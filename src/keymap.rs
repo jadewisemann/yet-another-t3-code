@@ -55,6 +55,16 @@ actions!(
         StopThread,
         /// Archive the open thread.
         ArchiveThread,
+        /// Settle the open thread, or bring a settled one back.
+        ToggleSettled,
+        /// File the open thread under a section (type a name; empty takes it out).
+        MoveToSection,
+        /// Fold or unfold the open thread's section.
+        ToggleSection,
+        /// Show or hide the current project's settled threads.
+        ToggleSettledSection,
+        /// Open the pull request of the open thread's branch.
+        OpenPullRequest,
         /// Show the list of shortcuts.
         ToggleShortcuts,
         /// Re-read keymap.json and theme.json.
@@ -85,11 +95,19 @@ pub fn listed_actions() -> Vec<(&'static str, Box<dyn Action>)> {
         ("Attach files", Box::new(AttachFiles)),
         ("Toggle sidebar", Box::new(ToggleSidebar)),
         ("Show changes", Box::new(ToggleDiff)),
-        ("Changes: all turns / last turn", Box::new(ToggleDiffScope)),
+        ("Changes: this turn / all turns", Box::new(ToggleDiffScope)),
         ("Show terminal", Box::new(ToggleTerminal)),
         ("Clear terminal", Box::new(ClearTerminal)),
         ("Stop turn", Box::new(StopThread)),
         ("Archive thread", Box::new(ArchiveThread)),
+        ("Settle / unsettle thread", Box::new(ToggleSettled)),
+        ("Move thread to section", Box::new(MoveToSection)),
+        ("Fold / unfold section", Box::new(ToggleSection)),
+        (
+            "Show / hide settled threads",
+            Box::new(ToggleSettledSection),
+        ),
+        ("Open pull request", Box::new(OpenPullRequest)),
         ("Show shortcuts", Box::new(ToggleShortcuts)),
         ("Reload config", Box::new(ReloadConfig)),
         ("Open config folder", Box::new(OpenConfigFolder)),
@@ -118,6 +136,7 @@ fn default_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("secondary-right", End, Some("TextInput")),
         KeyBinding::new("enter", Submit, Some("TextInput")),
         KeyBinding::new("escape", Cancel, Some("TextInput")),
+        KeyBinding::new("tab", Complete, Some("TextInput")),
         KeyBinding::new("ctrl-cmd-space", ShowCharacterPalette, Some("TextInput")),
         // Workspace commands. These also work while typing, because the inputs sit inside
         // the workspace and pass keys they do not handle up to it.
@@ -144,6 +163,11 @@ fn default_bindings() -> Vec<KeyBinding> {
             ArchiveThread,
             Some("Workspace"),
         ),
+        KeyBinding::new("secondary-e", ToggleSettled, Some("Workspace")),
+        KeyBinding::new("secondary-shift-s", MoveToSection, Some("Workspace")),
+        KeyBinding::new("secondary-alt-s", ToggleSection, Some("Workspace")),
+        KeyBinding::new("secondary-shift-e", ToggleSettledSection, Some("Workspace")),
+        KeyBinding::new("secondary-alt-p", OpenPullRequest, Some("Workspace")),
         KeyBinding::new("secondary-/", ToggleShortcuts, Some("Workspace")),
         KeyBinding::new("secondary-shift-,", ReloadConfig, Some("Workspace")),
         KeyBinding::new("secondary-,", OpenConfigFolder, Some("Workspace")),
@@ -174,7 +198,7 @@ fn terminal_keys() -> &'static [&'static str] {
     } else {
         &[
             "f2", "ctrl-n", "ctrl-l", "ctrl-b", "ctrl-]", "ctrl-[", "ctrl-.", "ctrl-/", "ctrl-,",
-            "ctrl-q", "alt-up", "alt-down",
+            "ctrl-q", "ctrl-e", "alt-up", "alt-down",
         ]
     }
 }

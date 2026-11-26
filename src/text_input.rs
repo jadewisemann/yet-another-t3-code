@@ -36,12 +36,15 @@ actions!(
         Copy,
         Submit,
         Cancel,
+        Complete,
     ]
 );
 
 pub enum InputEvent {
     Submit,
     Cancel,
+    /// Tab: inputs that offer suggestions complete the text.
+    Complete,
     Changed,
 }
 
@@ -109,6 +112,10 @@ impl TextInput {
 
     fn cancel(&mut self, _: &Cancel, _: &mut Window, cx: &mut Context<Self>) {
         cx.emit(InputEvent::Cancel);
+    }
+
+    fn complete(&mut self, _: &Complete, _: &mut Window, cx: &mut Context<Self>) {
+        cx.emit(InputEvent::Complete);
     }
 
     fn left(&mut self, _: &Left, _: &mut Window, cx: &mut Context<Self>) {
@@ -676,6 +683,7 @@ impl Render for TextInput {
             .on_action(cx.listener(Self::copy))
             .on_action(cx.listener(Self::submit))
             .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::complete))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_mouse_up))
             .on_mouse_up_out(MouseButton::Left, cx.listener(Self::on_mouse_up))

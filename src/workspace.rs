@@ -1,6 +1,6 @@
 //! The main window: sidebar of projects and threads, the open conversation, and the composer.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::rc::Rc;
 
 use gpui::{
@@ -13,8 +13,8 @@ use crate::config::{self, Connection};
 use crate::keymap::*;
 use crate::local;
 use crate::protocol::{
-    self, ConversationMessage, DiffLineKind, ProjectShell, RequestItem, ShellStreamItem,
-    ThreadShell, ThreadStreamItem, TurnLedger,
+    self, ConversationMessage, DiffLineKind, ProjectShell, PullRequest, RequestItem, SectionKey,
+    ShellStreamItem, ThreadShell, ThreadStreamItem, TurnLedger,
 };
 use crate::rpc::{self, RpcEvent, RpcHandle};
 use crate::terminal::TerminalPanel;
@@ -41,6 +41,73 @@ struct DiffView {
     request_key: Option<String>,
     state: DiffState,
     scroll: UniformListScrollHandle,
+}
+
+/// A sidebar section and its threads, in display order.
+type Section<'a> = (SectionKey, Vec<&'a ThreadShell>);
+
+/// The pull requests of the open thread's branches, as the server last listed them.
+#[derive(Default)]
+struct PullRequests {
+    /// The thread and latest turn the list is for, so it is asked again after each turn.
+    for_turn: Option<(String, u64)>,
+    request_key: Option<String>,
+    list: Vec<PullRequest>,
+    error: Option<String>,
+}
+
+/// Which sidebar sections are folded, saved in `sidebar.json`. Settled sections start folded.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SidebarState {
+    /// `<project id>\n<section id>` of folded named and unsorted sections.
+    #[serde(default)]
+    collapsed: HashSet<String>,
+    /// Projects whose settled section is unfolded.
+    #[serde(default)]
+    settled_open: HashSet<String>,
+}
+
+impl SidebarState {
+    fn load() -> Self {
+        std::fs::read_to_string(config::config_file("sidebar.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default()
+    }
+
+    fn save(&self) {
+        if let Ok(text) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::create_dir_all(config::config_dir());
+            let _ = std::fs::write(config::config_file("sidebar.json"), text);
+        }
+    }
+
+    fn is_folded(&self, project_id: &str, key: &SectionKey) -> bool {
+        match key {
+            SectionKey::Settled => !self.settled_open.contains(project_id),
+            _ => self
+                .collapsed
+                .contains(&format!("{project_id}\n{}", key.id())),
+        }
+    }
+
+    fn toggle(&mut self, project_id: &str, key: &SectionKey) {
+        match key {
+            SectionKey::Settled => {
+                if !self.settled_open.remove(project_id) {
+                    self.settled_open.insert(project_id.to_string());
+                }
+            }
+            _ => {
+                let id = format!("{project_id}\n{}", key.id());
+                if !self.collapsed.remove(&id) {
+                    self.collapsed.insert(id);
+                }
+            }
+        }
+        self.save();
+    }
 }
 
 enum DiffState {
@@ -116,6 +183,11 @@ pub struct Workspace {
     composer: Entity<TextInput>,
     rename_input: Entity<TextInput>,
     renaming: bool,
+    /// Set while choosing the open thread's section in the header.
+    section_input: Entity<TextInput>,
+    choosing_section: bool,
+    sidebar_state: SidebarState,
+    pull_requests: PullRequests,
     pair_input: Entity<TextInput>,
     /// The current server is on this machine, so a rejected token can be replaced silently.
     server_is_local: bool,
@@ -134,6 +206,8 @@ impl Workspace {
     pub fn new(config_notice: Option<String>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let composer = cx.new(|cx| TextInput::new("Message the agent…", cx));
         let rename_input = cx.new(|cx| TextInput::new("Thread name", cx));
+        let section_input =
+            cx.new(|cx| TextInput::new("Section name (empty: no section, Tab: complete)", cx));
         let pair_input = cx.new(|cx| TextInput::new("http://127.0.0.1:3773/pair#token=…", cx));
 
         let subscriptions = vec![
@@ -152,7 +226,17 @@ impl Workspace {
                 |this, _, event: &InputEvent, window, cx| match event {
                     InputEvent::Submit => this.commit_rename(window, cx),
                     InputEvent::Cancel => this.cancel_rename(window, cx),
-                    InputEvent::Changed => {}
+                    InputEvent::Complete | InputEvent::Changed => {}
+                },
+            ),
+            cx.subscribe_in(
+                &section_input,
+                window,
+                |this, _, event: &InputEvent, window, cx| match event {
+                    InputEvent::Submit => this.commit_section(window, cx),
+                    InputEvent::Cancel => this.cancel_section(window, cx),
+                    InputEvent::Complete => this.complete_section(cx),
+                    InputEvent::Changed => cx.notify(),
                 },
             ),
             cx.subscribe_in(
@@ -192,6 +276,10 @@ impl Workspace {
             composer,
             rename_input,
             renaming: false,
+            section_input,
+            choosing_section: false,
+            sidebar_state: SidebarState::load(),
+            pull_requests: PullRequests::default(),
             pair_input,
             server_is_local: false,
             repaired_once: false,
@@ -351,6 +439,7 @@ impl Workspace {
             ThreadStreamItem::Snapshot { projection } => {
                 self.turns = TurnLedger::from_projection(&projection);
                 self.refresh_diff();
+                self.refresh_pull_requests();
                 self.requests = projection
                     .turn_items
                     .iter()
@@ -365,6 +454,7 @@ impl Workspace {
             ThreadStreamItem::Event { event } => {
                 if self.turns.apply_event(&event) {
                     self.refresh_diff();
+                    self.refresh_pull_requests();
                 }
                 if let Some(request) = protocol::request_from_event(&event) {
                     match self.requests.iter_mut().find(|r| r.id == request.id) {
@@ -430,7 +520,76 @@ impl Workspace {
         }
     }
 
+    /// Asks for the open thread's pull requests once per finished turn.
+    fn refresh_pull_requests(&mut self) {
+        let Some(thread_id) = self.selected_thread.clone() else {
+            self.pull_requests = PullRequests::default();
+            return;
+        };
+        let for_turn = (thread_id.clone(), self.turns.latest_turn());
+        if self.pull_requests.for_turn.as_ref() == Some(&for_turn) {
+            return;
+        }
+        if self
+            .pull_requests
+            .for_turn
+            .as_ref()
+            .is_some_and(|(t, _)| *t != thread_id)
+        {
+            self.pull_requests.list.clear();
+            self.pull_requests.error = None;
+        }
+        self.pull_requests.for_turn = Some(for_turn);
+        let Some(rpc) = &self.rpc else { return };
+        self.next_query += 1;
+        let key = format!("prs:{}", self.next_query);
+        rpc.query(
+            key.clone(),
+            protocol::method::GET_THREAD_PULL_REQUESTS,
+            serde_json::json!({ "threadId": thread_id }),
+        );
+        self.pull_requests.request_key = Some(key);
+    }
+
+    fn on_pull_requests(&mut self, key: &str, result: Result<serde_json::Value, String>) {
+        if self.pull_requests.request_key.as_deref() != Some(key) {
+            return;
+        }
+        self.pull_requests.request_key = None;
+        match result {
+            Ok(value) => {
+                let (list, error) = protocol::pull_requests_from(&value);
+                self.pull_requests.list = list;
+                self.pull_requests.error = error;
+            }
+            // A server without the method (T3 Code itself) has no pull request list.
+            Err(_) => {
+                self.pull_requests.list.clear();
+                self.pull_requests.error = None;
+            }
+        }
+    }
+
+    fn open_pull_request(&mut self, _: &OpenPullRequest, _: &mut Window, cx: &mut Context<Self>) {
+        match self.pull_requests.list.first() {
+            Some(pr) => cx.open_url(&pr.url),
+            None => {
+                self.notice = Some(match &self.pull_requests.error {
+                    Some(error) => format!("No pull request found: {error}"),
+                    None => "No pull request for this thread's branches yet.".into(),
+                });
+                // Look again; the agent may have just opened one.
+                self.pull_requests.for_turn = None;
+                self.refresh_pull_requests();
+            }
+        }
+        cx.notify();
+    }
+
     fn on_query_result(&mut self, key: String, result: Result<serde_json::Value, String>) {
+        if key.starts_with("prs:") {
+            return self.on_pull_requests(&key, result);
+        }
         let Some(diff) = &mut self.diff else { return };
         if diff.request_key.as_deref() != Some(key.as_str()) {
             return;
@@ -438,14 +597,13 @@ impl Workspace {
         diff.request_key = None;
         diff.state = match result {
             Ok(value) => {
-                let text = value.get("diff").and_then(|d| d.as_str()).unwrap_or("");
-                if text.is_empty() {
+                let lines: Vec<_> = protocol::turn_diff_lines(&value)
+                    .into_iter()
+                    .map(|(kind, line)| (kind, SharedString::from(line)))
+                    .collect();
+                if lines.is_empty() {
                     DiffState::Empty
                 } else {
-                    let lines = protocol::diff_lines(text)
-                        .into_iter()
-                        .map(|(kind, line)| (kind, SharedString::from(line)))
-                        .collect();
                     DiffState::Ready(Rc::new(lines))
                 }
             }
@@ -612,13 +770,16 @@ impl Workspace {
     fn toggle_diff(&mut self, _: &ToggleDiff, _: &mut Window, cx: &mut Context<Self>) {
         if self.diff.take().is_none() {
             self.diff = Some(DiffView {
-                last_turn_only: false,
+                // The turn that just finished is what you usually want to look at.
+                last_turn_only: true,
                 range: None,
                 request_key: None,
                 state: DiffState::Empty,
                 scroll: UniformListScrollHandle::new(),
             });
             self.refresh_diff();
+            self.pull_requests.for_turn = None;
+            self.refresh_pull_requests();
         }
         cx.notify();
     }
@@ -650,8 +811,9 @@ impl Workspace {
             .filter(|m| m.workflow_script != Some(true) && !(m.text.is_empty() && !m.streaming))
     }
 
-    /// Projects with their listed threads, newest activity first, in sidebar order.
-    fn sidebar_groups(&self) -> Vec<(&ProjectShell, Vec<&ThreadShell>)> {
+    /// Projects with their sections of listed threads, newest activity first, in sidebar
+    /// order.
+    fn sidebar_groups(&self) -> Vec<(&ProjectShell, Vec<Section<'_>>)> {
         self.projects
             .iter()
             .filter(|p| p.archived_at.is_none())
@@ -667,16 +829,207 @@ impl Workspace {
                         .cmp(&a.pinned_at.is_some())
                         .then_with(|| b.sort_key().cmp(a.sort_key()))
                 });
-                (project, threads)
+                (project, protocol::sections_of(threads))
             })
             .collect()
     }
 
+    /// The threads next/previous step through: those in unfolded sections, plus the open one.
     fn sidebar_order(&self) -> Vec<String> {
+        let selected = self.selected_thread.as_deref();
         self.sidebar_groups()
             .into_iter()
-            .flat_map(|(_, threads)| threads.into_iter().map(|t| t.id.clone()))
+            .flat_map(|(project, sections)| {
+                let folded: Vec<bool> = sections
+                    .iter()
+                    .map(|(key, _)| self.sidebar_state.is_folded(&project.id, key))
+                    .collect();
+                sections
+                    .into_iter()
+                    .zip(folded)
+                    .flat_map(move |((_, threads), folded)| {
+                        threads
+                            .into_iter()
+                            .filter(move |t| !folded || Some(t.id.as_str()) == selected)
+                            .map(|t| t.id.clone())
+                    })
+            })
             .collect()
+    }
+
+    /// The section the open thread is listed under.
+    fn current_section(&self) -> Option<(String, SectionKey)> {
+        let thread = self.current_thread()?;
+        let key = if thread.is_settled() {
+            SectionKey::Settled
+        } else {
+            match thread.section.as_deref().map(str::trim) {
+                Some(name) if !name.is_empty() => SectionKey::Named(name.to_string()),
+                _ => SectionKey::Unsorted,
+            }
+        };
+        Some((thread.project_id.clone(), key))
+    }
+
+    fn toggle_section(&mut self, _: &ToggleSection, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some((project_id, key)) = self.current_section() {
+            self.sidebar_state.toggle(&project_id, &key);
+            cx.notify();
+        }
+    }
+
+    fn toggle_settled_section(
+        &mut self,
+        _: &ToggleSettledSection,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(project_id) = self.current_project_id() {
+            self.sidebar_state.toggle(&project_id, &SectionKey::Settled);
+            cx.notify();
+        }
+    }
+
+    /// The thread after (or else before) `thread_id` in the sidebar, to open when it leaves
+    /// the list.
+    fn neighbor_of(&self, thread_id: &str) -> Option<String> {
+        let order = self.sidebar_order();
+        order
+            .iter()
+            .position(|id| id == thread_id)
+            .and_then(|i| {
+                order
+                    .get(i + 1)
+                    .or_else(|| i.checked_sub(1).and_then(|j| order.get(j)))
+            })
+            .cloned()
+    }
+
+    /// Settles the open thread, or brings a settled one back. Nothing settles by itself.
+    fn toggle_settled(&mut self, _: &ToggleSettled, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(thread_id) = self.selected_thread.clone() else {
+            return;
+        };
+        let Some(rpc) = self.rpc.clone() else { return };
+        let Some(settled) = self.threads.get(&thread_id).map(|t| t.is_settled()) else {
+            return;
+        };
+        if settled {
+            rpc.dispatch("Unsettle", protocol::unsettle_thread(&thread_id));
+            if let Some(thread) = self.threads.get_mut(&thread_id) {
+                thread.settled_at = None;
+            }
+            self.notice = Some("Moved back from Settled.".into());
+            cx.notify();
+            return;
+        }
+        let next = self.neighbor_of(&thread_id);
+        rpc.dispatch("Settle", protocol::settle_thread(&thread_id));
+        if let Some(thread) = self.threads.get_mut(&thread_id) {
+            thread.settled_at = Some(protocol::iso_now());
+        }
+        self.notice = Some(format!(
+            "Settled. {} brings it back.",
+            window.keystroke_text_for(&ToggleSettled)
+        ));
+        // Like archiving, settling moves on to the next thread unless the settled list shows.
+        let project_open = self
+            .current_thread()
+            .is_some_and(|t| self.sidebar_state.settled_open.contains(&t.project_id));
+        if !project_open && next.is_some() {
+            self.select_thread(next, window, cx);
+        }
+        cx.notify();
+    }
+
+    fn move_to_section(&mut self, _: &MoveToSection, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(section) = self
+            .current_thread()
+            .map(|t| t.section.clone().unwrap_or_default())
+        else {
+            return;
+        };
+        self.renaming = false;
+        self.choosing_section = true;
+        self.section_input.update(cx, |input, cx| {
+            input.set_text(section, cx);
+            input.select_all_text(cx);
+        });
+        window.focus(&self.section_input.focus_handle(cx));
+        cx.notify();
+    }
+
+    /// Section names of the open thread's project that start with what is typed.
+    fn section_suggestions(&self, cx: &App) -> Vec<String> {
+        let Some(project_id) = self.current_thread().map(|t| t.project_id.clone()) else {
+            return Vec::new();
+        };
+        let typed = self.section_input.read(cx).text().trim().to_lowercase();
+        protocol::section_names(
+            self.threads
+                .values()
+                .filter(|t| t.project_id == project_id && t.is_listed()),
+        )
+        .into_iter()
+        .filter(|name| name.to_lowercase().starts_with(&typed))
+        .collect()
+    }
+
+    fn complete_section(&mut self, cx: &mut Context<Self>) {
+        let typed = self.section_input.read(cx).text().trim().to_string();
+        let suggestions = self.section_suggestions(cx);
+        // Tab again moves on to the next match.
+        let next = match suggestions.iter().position(|s| *s == typed) {
+            Some(i) => suggestions.get(i + 1).or(suggestions.first()),
+            None => suggestions.first(),
+        };
+        if let Some(name) = next.cloned() {
+            self.section_input
+                .update(cx, |input, cx| input.set_text(name, cx));
+        }
+        cx.notify();
+    }
+
+    fn commit_section(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let typed = self.section_input.read(cx).text().trim().to_string();
+        self.choosing_section = false;
+        // An existing section keeps its spelling: "reviews" files into "Reviews".
+        let name = self
+            .section_suggestions(cx)
+            .into_iter()
+            .find(|s| s.to_lowercase() == typed.to_lowercase())
+            .unwrap_or(typed);
+        let section = (!name.is_empty()).then_some(name);
+        if let (Some(thread_id), Some(rpc)) = (self.selected_thread.clone(), self.rpc.clone())
+            && let Some(thread) = self.threads.get_mut(&thread_id)
+            && thread.section != section
+        {
+            thread.section = section.clone();
+            rpc.dispatch(
+                "Move to section",
+                protocol::set_thread_section(&thread_id, section.as_deref()),
+            );
+            self.notice = Some(match &section {
+                Some(name) => format!("Moved to {name}."),
+                None => "Took the thread out of its section.".into(),
+            });
+            // Show where it went.
+            if let Some(name) = section {
+                let key = SectionKey::Named(name);
+                let project_id = thread.project_id.clone();
+                if self.sidebar_state.is_folded(&project_id, &key) {
+                    self.sidebar_state.toggle(&project_id, &key);
+                }
+            }
+        }
+        window.focus(&self.composer.focus_handle(cx));
+        cx.notify();
+    }
+
+    fn cancel_section(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.choosing_section = false;
+        window.focus(&self.composer.focus_handle(cx));
+        cx.notify();
     }
 
     /// The model and modes a new thread in the project starts with: the latest thread's
@@ -763,6 +1116,7 @@ impl Workspace {
         if self.renaming {
             self.renaming = false;
         }
+        self.choosing_section = false;
         if thread_id.is_some() {
             self.draft_project = None;
         }
@@ -772,6 +1126,7 @@ impl Workspace {
             self.messages_loaded = false;
             self.turns = TurnLedger::default();
             self.refresh_diff();
+            self.refresh_pull_requests();
             if let Some(rpc) = &self.rpc {
                 rpc.subscribe_thread(thread_id.clone());
             }
@@ -807,6 +1162,10 @@ impl Workspace {
             .filter_map(PendingAttachment::message_value)
             .collect();
         if let Some(thread) = self.current_thread() {
+            // Writing to a settled thread brings it back from Settled.
+            if thread.is_settled() {
+                rpc.dispatch("Unsettle", protocol::unsettle_thread(&thread.id));
+            }
             rpc.dispatch(
                 "Send",
                 protocol::send_message(&thread.id, &text, &attachments, thread.is_working()),
@@ -823,6 +1182,13 @@ impl Workspace {
             self.notice = Some("Add a project first: choose its folder with Add project.".into());
             cx.notify();
             return;
+        }
+        if let Some(thread) = self
+            .selected_thread
+            .clone()
+            .and_then(|id| self.threads.get_mut(&id))
+        {
+            thread.settled_at = None;
         }
         self.composer.update(cx, |input, cx| input.set_text("", cx));
         self.attachments.clear();
@@ -1111,6 +1477,7 @@ impl Workspace {
             return;
         };
         self.renaming = true;
+        self.choosing_section = false;
         self.rename_input.update(cx, |input, cx| {
             input.set_text(title, cx);
             input.select_all_text(cx);
@@ -1196,16 +1563,7 @@ impl Workspace {
             return;
         };
         let Some(rpc) = self.rpc.clone() else { return };
-        let order = self.sidebar_order();
-        let next = order
-            .iter()
-            .position(|id| *id == thread_id)
-            .and_then(|i| {
-                order
-                    .get(i + 1)
-                    .or_else(|| i.checked_sub(1).and_then(|j| order.get(j)))
-            })
-            .cloned();
+        let next = self.neighbor_of(&thread_id);
         rpc.dispatch("Archive", protocol::archive_thread(&thread_id));
         self.threads.remove(&thread_id);
         self.select_thread(next, window, cx);
@@ -1390,7 +1748,7 @@ impl Workspace {
                     )),
             );
         }
-        for (project, threads) in groups {
+        for (project, sections) in groups {
             let project_id = project.id.clone();
             list = list.child(
                 div()
@@ -1418,53 +1776,97 @@ impl Workspace {
                             })),
                     ),
             );
-            for thread in threads {
-                let selected = self.selected_thread.as_deref() == Some(thread.id.as_str());
-                let thread_id = thread.id.clone();
-                let dot: Option<Hsla> = if thread.needs_attention() {
-                    Some(p.danger)
-                } else if thread.is_working() {
-                    Some(p.working)
-                } else {
-                    None
-                };
-                list = list.child(
-                    div()
-                        .id(SharedString::from(format!("thread-{}", thread.id)))
-                        .px_2()
-                        .py_1p5()
-                        .rounded_md()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .cursor_pointer()
-                        .when(selected, |el| el.bg(p.row_selected))
-                        .when(!selected, |el| el.hover(|s| s.bg(p.row_hover)))
-                        .child(
-                            div()
-                                .size(px(6.))
-                                .rounded_full()
-                                .when_some(dot, |el, color| el.bg(color)),
-                        )
-                        .child(
-                            div()
-                                .flex_1()
-                                .overflow_hidden()
-                                .whitespace_nowrap()
-                                .text_ellipsis()
-                                .child(if thread.title.is_empty() {
-                                    "Untitled".to_string()
-                                } else {
-                                    thread.title.clone()
-                                }),
-                        )
-                        .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
-                            this.select_thread(Some(thread_id.clone()), window, cx);
-                            if event.click_count() >= 2 {
-                                this.rename_thread(&RenameThread, window, cx);
-                            }
-                        })),
-                );
+            for (key, threads) in sections {
+                let folded = self.sidebar_state.is_folded(&project.id, &key);
+                if key != SectionKey::Unsorted {
+                    let label = match &key {
+                        SectionKey::Named(name) => name.clone(),
+                        SectionKey::Settled => "Settled".to_string(),
+                        SectionKey::Unsorted => String::new(),
+                    };
+                    let toggle_project = project.id.clone();
+                    let toggle_key = key.clone();
+                    list = list.child(
+                        div()
+                            .id(SharedString::from(format!(
+                                "section-{}-{}",
+                                project.id,
+                                key.id()
+                            )))
+                            .mt_1()
+                            .px_2()
+                            .py_0p5()
+                            .rounded_md()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .text_xs()
+                            .text_color(p.muted)
+                            .cursor_pointer()
+                            .hover(|s| s.bg(p.row_hover))
+                            .child(if folded { "▸" } else { "▾" })
+                            .child(div().flex_1().overflow_hidden().child(label))
+                            .child(threads.len().to_string())
+                            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                                this.sidebar_state.toggle(&toggle_project, &toggle_key);
+                                cx.notify();
+                            })),
+                    );
+                }
+                for thread in threads {
+                    let selected = self.selected_thread.as_deref() == Some(thread.id.as_str());
+                    if folded && !selected {
+                        continue;
+                    }
+                    let settled = thread.is_settled();
+
+                    let thread_id = thread.id.clone();
+                    let dot: Option<Hsla> = if thread.needs_attention() {
+                        Some(p.danger)
+                    } else if thread.is_working() {
+                        Some(p.working)
+                    } else {
+                        None
+                    };
+                    list = list.child(
+                        div()
+                            .id(SharedString::from(format!("thread-{}", thread.id)))
+                            .px_2()
+                            .py_1p5()
+                            .rounded_md()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .cursor_pointer()
+                            .when(selected, |el| el.bg(p.row_selected))
+                            .when(settled, |el| el.text_color(p.muted))
+                            .when(!selected, |el| el.hover(|s| s.bg(p.row_hover)))
+                            .child(
+                                div()
+                                    .size(px(6.))
+                                    .rounded_full()
+                                    .when_some(dot, |el, color| el.bg(color)),
+                            )
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .child(if thread.title.is_empty() {
+                                        "Untitled".to_string()
+                                    } else {
+                                        thread.title.clone()
+                                    }),
+                            )
+                            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
+                                this.select_thread(Some(thread_id.clone()), window, cx);
+                                if event.click_count() >= 2 {
+                                    this.rename_thread(&RenameThread, window, cx);
+                                }
+                            })),
+                    );
+                }
             }
         }
 
@@ -1478,6 +1880,7 @@ impl Workspace {
 
         div()
             .w(px(272.))
+            .flex_none()
             .h_full()
             .flex()
             .flex_col()
@@ -1566,7 +1969,41 @@ impl Workspace {
             .and_then(|id| self.projects.iter().find(|p| p.id == id))
             .map(|p| p.title.clone())
             .unwrap_or_default();
-        let title: AnyElement = if self.renaming {
+        let title: AnyElement = if self.choosing_section {
+            let suggestions = self.section_suggestions(cx);
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(
+                    div()
+                        .w(px(320.))
+                        .px_2()
+                        .py_1()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(p.accent)
+                        .bg(p.surface)
+                        .child(self.section_input.clone()),
+                )
+                .children(
+                    suggestions
+                        .into_iter()
+                        .take(5)
+                        .enumerate()
+                        .map(|(i, name)| {
+                            let pick = name.clone();
+                            dynamic_button(format!("section-pick-{i}"), name, p).on_click(
+                                cx.listener(move |this, _: &ClickEvent, window, cx| {
+                                    this.section_input
+                                        .update(cx, |input, cx| input.set_text(pick.clone(), cx));
+                                    this.commit_section(window, cx);
+                                }),
+                            )
+                        }),
+                )
+                .into_any_element()
+        } else if self.renaming {
             div()
                 .w(px(420.))
                 .px_2()
@@ -1600,6 +2037,38 @@ impl Workspace {
         };
         let working = thread.is_some_and(|t| t.is_working());
         let attention = thread.is_some_and(|t| t.needs_attention());
+        let editing = self.renaming || self.choosing_section;
+        let section_label = thread.map(|t| match (&t.section, t.is_settled()) {
+            (_, true) => "Settled".to_string(),
+            (Some(name), false) if !name.trim().is_empty() => name.clone(),
+            _ => "No section".to_string(),
+        });
+        let pr_buttons: Vec<AnyElement> = if thread.is_some() && !editing {
+            self.pull_requests
+                .list
+                .iter()
+                .take(1)
+                .enumerate()
+                .map(|(i, pr)| {
+                    let url = pr.url.clone();
+                    let label = if i == 0 {
+                        format!(
+                            "{}  {}",
+                            pr.label(),
+                            window.keystroke_text_for(&OpenPullRequest)
+                        )
+                    } else {
+                        pr.label()
+                    };
+                    dynamic_button(format!("pr-{i}"), label, p)
+                        .when(pr.state == "OPEN", |el| el.text_color(p.accent))
+                        .on_click(cx.listener(move |_, _: &ClickEvent, _, cx| cx.open_url(&url)))
+                        .into_any_element()
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         div()
             .h(px(52.))
             .px_5()
@@ -1610,12 +2079,36 @@ impl Workspace {
             .border_color(p.border)
             .child(div().text_color(p.muted).text_sm().child(project_title))
             .child(div().text_color(p.muted).child("/"))
-            .child(div().flex_1().overflow_hidden().child(title))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(160.))
+                    .overflow_hidden()
+                    .child(title),
+            )
+            .when_some(section_label.filter(|_| !editing), |el, label| {
+                el.child(
+                    dynamic_button(
+                        "section".into(),
+                        format!("{label}  {}", window.keystroke_text_for(&MoveToSection)),
+                        p,
+                    )
+                    .text_color(p.muted)
+                    .on_click(cx.listener(
+                        |this, _: &ClickEvent, window, cx| {
+                            this.move_to_section(&MoveToSection, window, cx)
+                        },
+                    )),
+                )
+            })
+            .children(pr_buttons)
             .when(attention, |el| {
                 el.child(chip("Needs your answer below", p.danger, p))
             })
             .when(working, |el| el.child(chip("Working…", p.working, p)))
-            .when(thread.is_some() && !self.renaming, |el| {
+            // With the changes panel open there is little room: F2 and the panel's own
+            // Close button cover these two.
+            .when(thread.is_some() && !editing && self.diff.is_none(), |el| {
                 el.child(
                     button(
                         "rename",
@@ -1629,7 +2122,7 @@ impl Workspace {
                     )),
                 )
             })
-            .when(thread.is_some() && !self.renaming, |el| {
+            .when(thread.is_some() && !editing && self.diff.is_none(), |el| {
                 el.child(
                     button(
                         "diff",
@@ -2009,7 +2502,7 @@ impl Workspace {
         let turn = diff.range.as_ref().map(|(_, _, to)| *to).unwrap_or(0);
         let caption = match (diff.last_turn_only, turn) {
             (_, 0) => "No turns yet".to_string(),
-            (true, n) => format!("Turn {n}"),
+            (true, n) => format!("This turn ({n})"),
             (false, 1) => "Turn 1".to_string(),
             (false, n) => format!("Turns 1–{n}"),
         };
@@ -2027,7 +2520,16 @@ impl Workspace {
             .border_b_1()
             .border_color(p.border)
             .child(div().font_weight(FontWeight::SEMIBOLD).child("Changes"))
-            .child(div().flex_1().text_sm().text_color(p.muted).child(caption))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .text_sm()
+                    .text_color(p.muted)
+                    .child(caption),
+            )
             .child(
                 button(
                     "diff-scope",
@@ -2046,6 +2548,59 @@ impl Workspace {
                     |this, _: &ClickEvent, window, cx| this.toggle_diff(&ToggleDiff, window, cx),
                 )),
             );
+        let pr_strip = (!self.pull_requests.list.is_empty() || self.pull_requests.error.is_some())
+            .then(|| {
+                let mut strip = div()
+                    .px_4()
+                    .py_2()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .border_b_1()
+                    .border_color(p.border)
+                    .text_sm();
+                for (i, pr) in self.pull_requests.list.iter().take(5).enumerate() {
+                    let url = pr.url.clone();
+                    strip = strip.child(
+                        div()
+                            .id(SharedString::from(format!("diff-pr-{i}")))
+                            .flex()
+                            .gap_2()
+                            .cursor_pointer()
+                            .hover(|s| s.bg(p.row_hover))
+                            .child(
+                                div()
+                                    .text_color(if pr.state == "OPEN" {
+                                        p.accent
+                                    } else {
+                                        p.muted
+                                    })
+                                    .child(pr.label()),
+                            )
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .child(pr.title.clone()),
+                            )
+                            .on_click(
+                                cx.listener(move |_, _: &ClickEvent, _, cx| cx.open_url(&url)),
+                            ),
+                    );
+                }
+                if self.pull_requests.list.is_empty()
+                    && let Some(error) = &self.pull_requests.error
+                {
+                    strip = strip.child(
+                        div()
+                            .text_color(p.muted)
+                            .child(format!("Pull requests: {error}")),
+                    );
+                }
+                strip
+            });
         let placeholder = |text: String| {
             div()
                 .flex_1()
@@ -2078,6 +2633,13 @@ impl Workspace {
                             };
                             let row = div().px_4().whitespace_nowrap().child(text);
                             match kind {
+                                DiffLineKind::Workspace => row
+                                    .mt_2()
+                                    .py_1()
+                                    .border_b_1()
+                                    .border_color(p.border)
+                                    .text_color(p.accent)
+                                    .font_weight(FontWeight::SEMIBOLD),
                                 DiffLineKind::File => {
                                     row.bg(p.surface).font_weight(FontWeight::SEMIBOLD)
                                 }
@@ -2099,7 +2661,9 @@ impl Workspace {
             }
         };
         div()
-            .w(gpui::relative(0.5))
+            .w(gpui::relative(0.45))
+            .flex_none()
+            .overflow_hidden()
             .h_full()
             .flex()
             .flex_col()
@@ -2107,6 +2671,7 @@ impl Workspace {
             .border_color(p.border)
             .bg(p.background)
             .child(header)
+            .children(pr_strip)
             .child(body)
             .into_any_element()
     }
@@ -2232,6 +2797,11 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::toggle_shortcuts))
             .on_action(cx.listener(Self::stop_thread))
             .on_action(cx.listener(Self::archive_thread))
+            .on_action(cx.listener(Self::toggle_settled))
+            .on_action(cx.listener(Self::move_to_section))
+            .on_action(cx.listener(Self::toggle_section))
+            .on_action(cx.listener(Self::toggle_settled_section))
+            .on_action(cx.listener(Self::open_pull_request))
             .on_action(cx.listener(Self::reload_config))
             .on_action(cx.listener(Self::open_config_folder))
             .on_action(cx.listener(Self::disconnect))
@@ -2253,6 +2823,7 @@ impl Render for Workspace {
 
         let main = div()
             .flex_1()
+            .min_w_0()
             .h_full()
             .flex()
             .flex_col()
